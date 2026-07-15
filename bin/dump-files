@@ -4,7 +4,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [DUMPFILES_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[-n|--number] [-v|--verbose] [--d|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--] [-|FILE ...] [-?|-h|--help]'
+    printf 'Usage: [DUMPFILES_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[-n|--number] [--no-header|-d|--description DESCRIPTION] [-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--] [-|FILE ...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -26,9 +26,11 @@ HELPDESCRIPTION
     echo
     cat <<HELPTEXT
     --number|-n		Number all output lines.
-    --verbose|-v	Print each FILE content on a separate line and prepend
-			its filespec.
-    --on-debug|-d	Only print FILE contents when \$DEBUG refers to the
+    --no-header		Omit the header line with the timestamp (which is added
+			by default).
+    --description|-d DESCRIPTION
+			Prepend DESCRIPTION to the timestamp in the header line.
+    --on-debug|-D	Only print FILE contents when \$DEBUG refers to the
 			DEBUGGEE.
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
@@ -43,7 +45,8 @@ HELPTEXT
 }
 
 isNumber=
-isVerbose=
+isHeader=t
+description=
 isOnDebug=
 debuggee=
 module=
@@ -52,8 +55,10 @@ do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--number|-n)	shift; isNumber=t;;
-	--verbose|-v)	shift; isVerbose=t;;
-	--on-debug|-d)	shift; isOnDebug=t;;
+	--no-header)	shift; isHeader=;;
+	--description|-d)
+			shift; description="${1?}"; shift;;
+	--on-debug|-D)	shift; isOnDebug=t;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
 	--)		shift; break;;
@@ -92,17 +97,18 @@ fi
 
 [ $# -gt 0 ] || exit 1
 
-if [ "$isVerbose" ]; then
+if [ "$isHeader" ]; then
+    isFirst=t
     let count=0
     for filespec
     do
 	let count+=1
-	if [ "$filespec" = - ]; then
-	    printf 'stdin:\n'
-	else
-	    printf 'file %d: %s\n' "$count" "$filespec"
-	fi
-
+	[ "$filespec" = - ] \
+	    && fileDescription='stdin' \
+	    || fileDescription="$filespec"
+	filePrefix=''; [ $# -gt 1 ] && filePrefix="${count}:"
+	HEADER_STYLE=dashed-line header ${isFirst:+--first} --no-color -- "${description}${description:+ at }$(timestamp --logging) ${filePrefix}${fileDescription}"
+	isFirst=
 	cat ${isNumber:+--number} -- "$filespec"
     done
 elif [ $# -gt 0 ]; then
