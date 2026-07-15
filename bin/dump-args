@@ -14,7 +14,8 @@ getLongUsage()
 			printed as such (with 0-based index).
     --verbose|-v	Print each argument on a separate line and prepend the
 			index.
-    --on-debug|-D	Only print ARG(s) when \$DEBUG refers to the DEBUGGEE.
+    --on-debug|-D	Log ARG(s) to a debug file (DEBUGGEE.log) only when
+			\$DEBUG refers to the DEBUGGEE.
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 $ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.

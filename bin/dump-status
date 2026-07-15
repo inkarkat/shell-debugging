@@ -28,8 +28,8 @@ HELPDESCRIPTION
     echo
     cat <<HELPTEXT
     --verbose|-v	Also include the full command-line arguments.
-    --on-debug|-D	Only print the exit status when \$DEBUG refers to the
-			DEBUGGEE.
+    --on-debug|-D	Log the exit status to a debug file (DEBUGGEE.log) only
+			when \$DEBUG refers to the DEBUGGEE.
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 $ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.

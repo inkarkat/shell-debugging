@@ -33,8 +33,8 @@ HELPDESCRIPTION
 			by default).
     --description|-d DESCRIPTION
 			Prepend DESCRIPTION to the timestamp in the header line.
-    --on-debug|-D	Only print FILE contents when \$DEBUG refers to the
-			DEBUGGEE.
+    --on-debug|-D	Log FILE contents to a debug file (DEBUGGEE.log) only
+			when \$DEBUG refers to the DEBUGGEE.
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 $ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.

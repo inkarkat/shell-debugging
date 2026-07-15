@@ -34,9 +34,10 @@ HELPDESCRIPTION
     cat <<HELPTEXT
     --eval		Print the evaluation result instead of the (quoted)
 			eval.
-    --on-debug|-D	Only print the execution trace when \$DEBUG refers to
-			the DEBUGGEE. Else, the COMMAND is just executed as if
-			verbose weren't prepended.
+    --on-debug|-D	Log the execution trace to a debug file (DEBUGGEE.log)
+			only when \$DEBUG refers to the DEBUGGEE. Else, the
+			COMMAND is just executed as if verbose weren't
+			prepended.
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 $ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.
