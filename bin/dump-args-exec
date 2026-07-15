@@ -1,19 +1,60 @@
 #!/bin/bash
 
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: [DUMPARGS_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$(dump-args --get-short-usage 2>/dev/null) [--] COMMAND [ARG ...] [-?|-h|--help]"
+}
 printUsage()
 {
-    cat <<HELPTEXT
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
 Print all supplied command-line arguments to standard error and also execute
 them.
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    dump-args --get-long-usage 2>/dev/null
+    cat <<HELPTEXT
+SEE ALSO:
+- verbose also executes and writes as an execution trace. Prefer that unless you
+  need the array-like output formatting of dump-args.
+
+EXIT STATUS:
+    *	Any exit status from COMMAND(s).
 HELPTEXT
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-v|--verbose [--] COMMAND [ARG ...] [-?|-h|--help]'
 }
+
 typeset -a dumpArgsArgs=()
-case "$1" in
-    --help|-h|-\?)	shift; printUsage "$0"; exit 0;;
-    --verbose|-v)	dumpArgsArgs+=("$1"); shift;;
-    --)			shift;;
-esac
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--)		shift; break;;
+	-*)		if argCount=$(dump-args --understands "$@"); then
+			    while ((argCount-- > 0))
+			    do
+				dumpArgsArgs+=("$1"); shift
+			    done
+			elif [ $? -eq 2 ]; then
+			    exit 2
+			else
+			    { echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2
+			fi
+			;;
+	*)		break;;
+    esac
+done
 if [ $# -eq 0 ]; then
     echo >&2 'ERROR: No COMMAND passed.'
     echo >&2
@@ -21,5 +62,6 @@ if [ $# -eq 0 ]; then
     exit 2
 fi
 
-dump-args "${dumpArgsArgs[@]}" -- "$@"
+DUMPARGS_PPID=$PPID \
+    dump-args "${dumpArgsArgs[@]}" -- "$@"
 exec "$@"

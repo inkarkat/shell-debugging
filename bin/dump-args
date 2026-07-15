@@ -1,10 +1,30 @@
 #!/bin/bash
 
+readonly generalArgs='[-a|--array NAME] [-v|--verbose] [--d|--on-debug [--for DEBUGGEE] [-m|--module MODULE]]'
+getShortUsage()
+{
+    printf %s "$generalArgs"
+}
+getLongUsage()
+{
+    cat <<HELPTEXT
+    --array|-a NAME	ARG(s) originate from an array named NAME and are
+			printed as such (with 0-based index).
+    --verbose|-v	Print each argument on a separate line and prepend the
+			index.
+    --on-debug|-d	Only print ARG(s) when \$DEBUG refers to the DEBUGGEE.
+    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
+			parent process.
+    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
+			enabled.
+HELPTEXT
+}
+
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [DUMPARGS_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[-a|--array NAME] [-v|--verbose] [--d|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--] [ARG ...] [-?|-h|--help]'
+    printf 'Usage: [DUMPARGS_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$generalArgs [--] [ARG ...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -24,16 +44,8 @@ HELPDESCRIPTION
     echo
     printShortUsage "$1"
     echo
+    getLongUsage
     cat <<HELPTEXT
-    --array|-a NAME	ARG(s) originate from an array named NAME and are
-			printed as such (with 0-based index).
-    --verbose|-v	Print each argument on a separate line and prepend the
-			index.
-    --on-debug|-d	Only print ARG(s) when \$DEBUG is set.
-    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
-			parent process.
-    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
-			enabled.
 EXIT STATUS:
     0	Complete success.
     1	No arguments.
@@ -51,18 +63,33 @@ isOnDebug=
 debuggee=
 module=
 startIndex=1
+option() { :; }
+parameter() { :; }
+endOfOptionsAndParameters() { :; }
+noUnderstand() { :; }
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
-	--array|-a)	shift; defaultPrefix="$1=("; defaultSuffix=')'; verbosePrefix="$1["; verboseSuffix=']='; startIndex=0; shift;;
-	--on-debug|-d)	shift; isOnDebug=t;;
-	--for)		shift; debuggee="${1?}"; shift;;
-	--module|-m)	shift; module="${1:?}"; shift;;
-	--verbose|-v)	shift; isVerbose=t;;
-	--)		shift; break;;
-	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
-	*)		break;;
+	--get-short-usage)
+			shift; getShortUsage "$@"; exit $?;;
+	--get-long-usage)
+			shift; getLongUsage "$@"; exit $?;;
+	--understands)	shift
+			option() { printf 1; exit 0; }
+			parameter() { printf 2; exit 0; }
+			endOfOptionsAndParameters() { exit 99; }
+			noUnderstand() { exit 1; }
+			;;
+
+	--array|-a)	shift; defaultPrefix="$1=("; defaultSuffix=')'; verbosePrefix="$1["; verboseSuffix=']='; startIndex=0; shift; option;;
+	--on-debug|-d)	shift; isOnDebug=t; option;;
+	--for)		shift; debuggee="${1?}"; shift; parameter;;
+	--module|-m)	shift; module="${1:?}"; shift; parameter;;
+	--verbose|-v)	shift; isVerbose=t; option;;
+	--)		endOfOptionsAndParameters; shift; break;;
+	-*)		noUnderstand; { echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		endOfOptionsAndParameters; break;;
     esac
 done
 case "$DUMPARGS_SINK" in
@@ -79,7 +106,7 @@ if [ "$isOnDebug" ]; then
 	{
 	    IFS= read -r -d '' debugCmd
 	    IFS= read -r -d '' debugSecond
-	} < /proc/${PPID}/cmdline
+	} < /proc/${DUMPARGS_PPID:-$PPID}/cmdline
 	debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
     fi
 
