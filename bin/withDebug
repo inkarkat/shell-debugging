@@ -11,9 +11,9 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-p|--paginate|-i|--inbox] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] | -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
-    echo
-    printf 'Usage: %q %s\n' "$(basename "$1")" "--recall [-p|--paginate|-i|--inbox] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-p|--paginate|-i|--inbox] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
 printUsage()
 {
