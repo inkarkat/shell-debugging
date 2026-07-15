@@ -11,9 +11,9 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-p|--paginate|-i|--inbox] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] | -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
-    echo
-    printf 'Usage: %q %s\n' "$(basename "$1")" "--recall [-p|--paginate|-i|--inbox] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-p|--paginate|-i|--inbox] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
 printUsage()
 {
@@ -40,6 +40,8 @@ HELPDESCRIPTION
     --paginate|-p	Show the debugging diagnostics (and all other stderr
 			output) separately after the execution.
     --inbox|-i		Write the debugging diagnostics into the inbox.
+    --interactive|-I	Source the COMMAND in an interactive shell. Only works
+			if COMMAND starts with "." or "source".
     --verbose|-v	Print the full command line (with all debugging
 			configuration) before executing it, in a format suitable
 			for copy-and-pasting it into the shell.
@@ -85,6 +87,7 @@ addDebug()
 	add "${commandName}${module:+:}${module}"
     done
 }
+programName=
 addDebugCommand()
 {
     local cmd="${1:?}"; shift
@@ -93,6 +96,11 @@ addDebugCommand()
 	printf >&2 'ERROR: Could not determine command name for %s\n' "$cmd"
 	return 1
     fi
+
+    if [[ "$cmd" =~ ^(\.|source)[[:space:]]+ ]]; then
+	: ${programName:=$commandName}
+    fi
+
     addDebug "$commandName"
 }
 
@@ -124,6 +132,7 @@ handleRecall()
 	exit 1
     fi
 
+    local overrideInteractive=
     local overrideVerbose=
     local overridePaginate=
     local overrideInbox=
@@ -133,6 +142,7 @@ handleRecall()
     while [ $# -ne 0 ]
     do
 	case "$1" in
+	    --interactive|-I)	shift; overrideInteractive=t;;
 	    --verbose|-v)	shift; overrideVerbose=t;;
 	    --paginate|-p)	shift; overridePaginate=t;;
 	    --inbox|-i)		shift; overrideInbox=t;;
@@ -152,6 +162,7 @@ handleRecall()
     while [ $# -ne 0 ]
     do
 	case "$1" in
+	    --interactive|-I)	[ "$overrideInteractive" ] && overrideInteractive= || allargs+=("$1"); shift;;
 	    --verbose|-v)	[ "$overrideVerbose" ] && overrideVerbose= || allargs+=("$1"); shift;;
 	    --paginate|-p)	[ "$overridePaginate" ] && overridePaginate= || allargs+=("$1"); shift;;
 	    --inbox|-i)		[ "$overrideInbox" ] && overrideInbox= || allargs+=("$1"); shift;;
@@ -166,6 +177,7 @@ handleRecall()
     # Add those arguments given to the recall that were not used to remove any
     # recalled arguments.
     typeset -a newArgs=()
+    [ "$overrideInteractive" ] && newArgs+=(--interactive)
     [ "$overrideVerbose" ] && newArgs+=(--verbose)
     [ "$overridePaginate" ] && newArgs+=(--paginate)
     [ "$overrideInbox" ] && newArgs+=(--inbox)
@@ -193,6 +205,7 @@ saveToInbox()
 }
 
 typeset -a allargs=("$@")
+isInteractive=
 isVerbose=
 commands=
 let commandCnt=0
@@ -207,6 +220,8 @@ do
 			viewer=("${PAGER:-less}" --RAW-CONTROL-CHARS --)
 			;;
 	--inbox|-i)	shift; viewer=(saveToInbox);;
+	--interactive|-I)
+			shift; isInteractive=t;;
 	--verbose|-v)	shift; isVerbose=t;;
 	--for)		shift
 			addDebug "${1:?}"; shift
@@ -282,6 +297,16 @@ if [ "$isVerbose" ]; then
 fi
 
 export DEBUG
+if [ -n "$programName" ]; then
+    shift   # .|source
+    shift   # $programName
+    export DEBUG_DEBUGGEE="$programName"
+    BASH_ARGV0="$programName"	# Bash 5+ only
+
+    if [ "$isInteractive" ]; then
+	printf -v commands 'bash -i -c %q' "$commands"
+    fi
+fi
 
 eval "${viewer:+{ }${commands}${viewer:+;\} 3>&1 1>&2 2>&3 3>&- }" \
     "${viewer:+|}" '"${viewer[@]}"' "${viewer:+ 3>&1 1>&2 2>&3 3>&-}"

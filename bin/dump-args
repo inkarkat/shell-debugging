@@ -73,7 +73,7 @@ isVerbose=
 verbosePrefix=''
 verboseSuffix=': '
 isOnDebug=
-debuggee=
+debuggee="$DEBUG_DEBUGGEE"
 module=
 startIndex=1
 option() { :; }
