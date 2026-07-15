@@ -5,7 +5,10 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--] COMMAND [...] [-?|-h|--help]'
+    [ "$isLogF" ] \
+	&& local args='[--prefix PREFIX [--prefix ...]] [--suffix SUFFIX [--suffix ...]] [--] FORMAT [ARG ...]' \
+	|| local args='[--] [MESSAGE ...]'
+    printf 'Usage: %q %s\n' "$(basename "$1")${isLogF:+f}" "[--for DEBUGGEE] [-m|--module MODULE] $args [-?|-h|--help]"
 }
 printUsage()
 {
@@ -19,8 +22,8 @@ printLongUsage()
     # This is the long "man page" when launched with the help argument.
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
-Log COMMAND (in the format TIMESTAMP (PID) COMMAND ...) to a debug file
-(DEBUGGEE.log) if debugging is enabled for the caller:
+${isLogF:+Format and }Log MESSAGE (in the format TIMESTAMP (PID) MESSAGE ...) to a debug
+file (DEBUGGEE.log) if debugging is enabled for the caller:
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 With "DEBUG=debug[log]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
 FILESPEC instead.
@@ -35,23 +38,19 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
-
-SEE ALSO:
-- verbose also executes COMMAND and logs unconditionally to standard error. With
-  --on-debug, it works like debuglog, but without the timestamp and PID.
-
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
-    *	Any exit status from COMMAND(s).
 HELPTEXT
 }
 
+isLogF=
 debuggee=
 module=
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--logf)		shift; isLogF=t;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
 	--)		shift; break;;
@@ -60,7 +59,7 @@ do
     esac
 done
 
-[ -n "$DEBUG" ] || exec "$@"
+[ -n "$DEBUG" ] || exit 0
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
@@ -79,13 +78,14 @@ case ",${DEBUG:-}," in
 	    *)		    : ${debuglogFilespec:="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
-	PRETTYPRINTQUOTEDARGS_PREFIX="$(log "$debuggee (${module}${module:+, }${PPID}) ")" \
-	    prettyPrintQuotedArgs -- "$@" \
-		>> "$debuglogFilespec"
+	if [ "$isLogF" ]; then
+	    logf --prefix "$debuggee (${module}${module:+, }${PPID}) " "$@" >> "$debuglogFilespec"
+	else
+	    log "$debuggee (${module}${module:+, }${PPID})" "$@" >> "$debuglogFilespec"
+	fi
 	;;
     *,@(debug|${scriptName}),*)
 	printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;;
 esac
-
-exec "$@"
+exit 0

@@ -56,6 +56,8 @@ HELPDESCRIPTION
     cat <<HELPTEXT
 SEE ALSO:
 - dump-args-exec also executes COMMAND in addition to printing them.
+- debuglog[f] log a MESSAGE with timestamp to a debug file if debugging is
+  enabled for the caller.
 
 EXIT STATUS:
     0	Complete success.
