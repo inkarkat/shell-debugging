@@ -86,7 +86,7 @@ if [ "$isActive" ]; then
 	?*)		exec 3>>"$VERBOSE_TRACEFILE";;
     esac
 
-    # Duplicated to ../../shell-basics/bin/echotrace
+    # Duplicated to echotrace
     nestingPrefix=
     if [ $SHLVL -gt 3 ]; then
 	nesting="${PS4:0:1}"

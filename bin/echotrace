@@ -99,7 +99,7 @@ case "$ECHOTRACE_TRACEFILE" in
     ?*)		exec 3>>"$ECHOTRACE_TRACEFILE";;
 esac
 
-# Duplicated to ../../verbose/bin/verbose
+# Duplicated to verbose
 nestingPrefix=
 if [ $SHLVL -gt 3 ]; then
     nesting="${PS4:0:1}"
