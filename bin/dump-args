@@ -56,7 +56,6 @@ HELPDESCRIPTION
     cat <<HELPTEXT
 EXIT STATUS:
     0	Complete success.
-    1	No arguments.
     2	Bad invocation, wrong or missing command-line arguments.
     99	Debugging is not enabled for the DEBUGGEE.
 HELPTEXT
@@ -135,17 +134,19 @@ case "$DUMPARGS_SINK" in
     ?*)		exec >>"$DUMPARGS_SINK";;
 esac
 
-[ $# -gt 0 ] || exit 1
-
 if [ "$isVerbose" ]; then
-    let argCnt=$startIndex
-    while [ $# -gt 0 ]
-    do
-	PRETTYPRINTQUOTEDARGS_PREFIX="${verbosePrefix}${argCnt}${verboseSuffix}" \
-	    prettyPrintQuotedArgs -- "$1"
-	shift
-	let argCnt+=1
-    done
+    if [ $# -gt 0 ]; then
+	let argCnt=$startIndex
+	while [ $# -gt 0 ]
+	do
+	    PRETTYPRINTQUOTEDARGS_PREFIX="${verbosePrefix}${argCnt}${verboseSuffix}" \
+		prettyPrintQuotedArgs -- "$1"
+	    shift
+	    let argCnt+=1
+	done
+    else
+	printf '%s%s\n' "$defaultPrefix" "$defaultSuffix"
+    fi
 else
     quotedArgs=; if [ $# -gt 0 ]; then printf -v quotedArgs '%q ' "$@"; quotedArgs=${quotedArgs% }; fi
     if [ $# -gt 0 ]; then
@@ -157,6 +158,6 @@ else
     fi
 fi
 
-if [ "$isOnDebug" ] && [ -n "$DUMPARGS_SINK" ]; then
+if [ $# -gt 0 ] && [ "$isOnDebug" ] && [ -n "$DUMPARGS_SINK" ]; then
     printf >&2 "%s%s to %q\\n" "$PS4" "$scriptName" "$DUMPARGS_SINK"
 fi
