@@ -1,6 +1,6 @@
 #!/bin/bash
 
-readonly generalArgs='[-a|--array NAME] [-v|--verbose] [--d|--on-debug [--for DEBUGGEE] [-m|--module MODULE]]'
+readonly generalArgs='[-a|--array NAME] [-v|--verbose] [--D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]]'
 getShortUsage()
 {
     printf %s "$generalArgs"
@@ -12,7 +12,7 @@ getLongUsage()
 			printed as such (with 0-based index).
     --verbose|-v	Print each argument on a separate line and prepend the
 			index.
-    --on-debug|-d	Only print ARG(s) when \$DEBUG refers to the DEBUGGEE.
+    --on-debug|-D	Only print ARG(s) when \$DEBUG refers to the DEBUGGEE.
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
@@ -83,7 +83,7 @@ do
 			;;
 
 	--array|-a)	shift; defaultPrefix="$1=("; defaultSuffix=')'; verbosePrefix="$1["; verboseSuffix=']='; startIndex=0; shift; option;;
-	--on-debug|-d)	shift; isOnDebug=t; option;;
+	--on-debug|-D)	shift; isOnDebug=t; option;;
 	--for)		shift; debuggee="${1?}"; shift; parameter;;
 	--module|-m)	shift; module="${1:?}"; shift; parameter;;
 	--verbose|-v)	shift; isVerbose=t; option;;
