@@ -94,18 +94,19 @@ finally()
     fi
 }
 
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
     {
-	IFS= read -r -d '' debugteeCmd
-	IFS= read -r -d '' debugteeSecond
+	IFS= read -r -d '' debugCmd
+	IFS= read -r -d '' debugSecond
     } < /proc/${PPID}/cmdline
-    debuggee="$(commandName --no-interpreter --undefined debugtee -- "$debugteeCmd" "$debugteeSecond")"
+    debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
 fi
 
 case ",${DEBUG}," in
     *,${debuggee}${module:+:}${module},*)
 	case ",${DEBUG}," in
-	    *,debugtee=*,*) filespec=",${DEBUG},"; filespec="${filespec#*,debugtee=}"; filespec="${filespec%%,*}"
+	    *,${scriptName}=*,*) filespec=",${DEBUG},"; filespec="${filespec#*,${scriptName}=}"; filespec="${filespec%%,*}"
 			    debugteeFilespec="$(realpath --no-symlinks -- "$filespec")" || debugteeFilespec="$filespec"
 			    ;;
 	    *)		    : ${debugteeFilespec:="${PWD}/${debuggee//:/-}.log"};;
@@ -119,8 +120,8 @@ case ",${DEBUG}," in
 	fi
 	tee ${isAppend:+--append} -- "$debugteeFilespec"
 	;;
-    *,debugtee,*)
-	printf >&2 'debugtee: Will activate with DEBUG=%q\n' "${debuggee}${module:+:}${module}"
+    *,${scriptName},*)
+	printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;&
     *)	exec cat
 esac

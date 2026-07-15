@@ -53,26 +53,27 @@ done
 
 [ -n "$DEBUG" ] || exec "$@"
 
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
     {
-	IFS= read -r -d '' debuglogCmd
-	IFS= read -r -d '' debuglogSecond
+	IFS= read -r -d '' debugCmd
+	IFS= read -r -d '' debugSecond
     } < /proc/${PPID}/cmdline
-    debuggee="$(commandName --no-interpreter --undefined debuglog -- "$debuglogCmd" "$debuglogSecond")"
+    debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
 fi
 
 case ",${DEBUG:-}," in
     *,${debuggee}${module:+:}${module},*)
 	case ",${DEBUG:-}," in
-	    *,debuglog=*,*) debuglogFilespec=",${DEBUG},"; debuglogFilespec="${debuglogFilespec#*,debuglog=}"; debuglogFilespec="${debuglogFilespec%%,*}"
+	    *,${scriptName}=*,*) debuglogFilespec=",${DEBUG},"; debuglogFilespec="${debuglogFilespec#*,${scriptName}=}"; debuglogFilespec="${debuglogFilespec%%,*}"
 			    log "$debuggee (${module}${module:+, }${PPID}) $*" >> "$debuglogFilespec"
 			    ;;
 	    *)		    log "$debuggee (${module}${module:+, }${PPID}) $*" >&2
 			    ;;
 	esac
 	;;
-    *,debuglog,*)
-	printf >&2 'debuglog: Will activate with DEBUG=%q\n' "${debuggee}${module:+:}${module}"
+    *,${scriptName},*)
+	printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;;
 esac
 
