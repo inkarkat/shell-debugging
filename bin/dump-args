@@ -1,5 +1,7 @@
 #!/bin/bash
+shopt -qs extglob
 
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 readonly generalArgs='[-a|--array NAME] [-v|--verbose] [--D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]]'
 getShortUsage()
 {
@@ -13,6 +15,11 @@ getLongUsage()
     --verbose|-v	Print each argument on a separate line and prepend the
 			index.
     --on-debug|-D	Only print ARG(s) when \$DEBUG refers to the DEBUGGEE.
+$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+$ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
+  FILE instead.
+$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will enable (if not
+  actually enabled).
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
@@ -92,16 +99,10 @@ do
 	*)		endOfOptionsAndParameters; break;;
     esac
 done
-case "$DUMPARGS_SINK" in
-    '')		exec >&2;;
-    \&[0-9])	eval "exec >$DUMPARGS_SINK";;
-    ?*)		exec >>"$DUMPARGS_SINK";;
-esac
 
 if [ "$isOnDebug" ]; then
     [ -n "$DEBUG" ] || exit 99
 
-    readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
     if [ -z "$debuggee" ]; then
 	{
 	    IFS= read -r -d '' debugCmd
@@ -112,6 +113,11 @@ if [ "$isOnDebug" ]; then
 
     case ",${DEBUG:-}," in
 	*,${debuggee}${module:+:}${module},*)
+	    case ",${DEBUG:-}," in
+		*,@(debug|${scriptName})=*,*)
+		    DUMPARGS_SINK=",${DEBUG},"; DUMPARGS_SINK="${DUMPARGS_SINK#*,@(debug|${scriptName})=}"; DUMPARGS_SINK="${DUMPARGS_SINK%%,*}"
+		    ;;
+	    esac
 	    ;;
 	*,@(debug|${scriptName}),*)
 	    printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
@@ -120,6 +126,12 @@ if [ "$isOnDebug" ]; then
 	*)  exit 99;;
     esac
 fi
+
+case "$DUMPARGS_SINK" in
+    '')		exec >&2;;
+    \&[0-9])	eval "exec >$DUMPARGS_SINK";;
+    ?*)		exec >>"$DUMPARGS_SINK";;
+esac
 
 [ $# -gt 0 ] || exit 1
 

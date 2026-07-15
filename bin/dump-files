@@ -1,4 +1,7 @@
 #!/bin/bash
+shopt -qs extglob
+
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 
 printShortUsage()
 {
@@ -32,6 +35,11 @@ HELPDESCRIPTION
 			Prepend DESCRIPTION to the timestamp in the header line.
     --on-debug|-D	Only print FILE contents when \$DEBUG refers to the
 			DEBUGGEE.
+$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+$ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
+  FILE instead.
+$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will enable (if not
+  actually enabled).
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
@@ -66,16 +74,10 @@ do
 	*)		break;;
     esac
 done
-case "$DUMPFILES_SINK" in
-    '')		exec >&2;;
-    \&[0-9])	eval "exec >$DUMPFILES_SINK";;
-    ?*)		exec >>"$DUMPFILES_SINK";;
-esac
 
 if [ "$isOnDebug" ]; then
     [ -n "$DEBUG" ] || exit 99
 
-    readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
     if [ -z "$debuggee" ]; then
 	{
 	    IFS= read -r -d '' debugCmd
@@ -86,6 +88,11 @@ if [ "$isOnDebug" ]; then
 
     case ",${DEBUG:-}," in
 	*,${debuggee}${module:+:}${module},*)
+	    case ",${DEBUG:-}," in
+		*,@(debug|${scriptName})=*,*)
+		    DUMPFILES_SINK=",${DEBUG},"; DUMPFILES_SINK="${DUMPFILES_SINK#*,@(debug|${scriptName})=}"; DUMPFILES_SINK="${DUMPFILES_SINK%%,*}"
+		    ;;
+	    esac
 	    ;;
 	*,@(debug|${scriptName}),*)
 	    printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
@@ -94,6 +101,12 @@ if [ "$isOnDebug" ]; then
 	*)  exit 99;;
     esac
 fi
+
+case "$DUMPFILES_SINK" in
+    '')		exec >&2;;
+    \&[0-9])	eval "exec >$DUMPFILES_SINK";;
+    ?*)		exec >>"$DUMPFILES_SINK";;
+esac
 
 [ $# -gt 0 ] || exit 1
 
