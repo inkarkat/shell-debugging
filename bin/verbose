@@ -37,8 +37,9 @@ HELPDESCRIPTION
     --eval		Print the evaluation result instead of the (quoted)
 			eval.
     --on-debug|-D	Log the execution trace to a debug file (DEBUGGEE.log)
-			only when \$DEBUG refers to the DEBUGGEE. Else, the
-			COMMAND is just executed as if verbose weren't
+			only when \$DEBUG refers to the DEBUGGEE, and print the
+			debug filespec to the terminal.
+			Else, the COMMAND is just executed as if verbose weren't
 			prepended.
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 $ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
@@ -103,6 +104,11 @@ if [ $# -eq 0 ]; then
     exit 2
 fi
 
+printfToTerm()
+{
+    { printf >/dev/tty "$@"; } 2>/dev/null
+}
+
 if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
     if [ -z "$debuggee" ]; then
 	{
@@ -124,7 +130,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 	    EXEC=''
 	    ;;
 	*,@(debug|${scriptName}),*)
-	    printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
 fi
@@ -144,6 +150,6 @@ fi
 
 executor "$@"; status=$?
 if [ "$isOnDebug" ] && [ -n "$VERBOSE_SINK" ]; then
-    printf >&2 "%s%s invocation logged to %q\\n" "$PS4" "$scriptName" "$VERBOSE_SINK"
+    printfToTerm "%s%s invocation logged to %q\\n" "$nestingPrefix" "$scriptName" "$VERBOSE_SINK"
 fi
 exit $status

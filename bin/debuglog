@@ -85,7 +85,7 @@ case ",${DEBUG:-}," in
 	fi
 	;;
     *,@(debug|${scriptName}),*)
-	printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	{ printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
 	;;
 esac
 exit 0

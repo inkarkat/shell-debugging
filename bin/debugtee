@@ -22,7 +22,7 @@ printLongUsage()
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
 Duplicate standard input to a debug file (DEBUGGEE.log) if debugging is enabled
-for the debuggee, and print the debug filespec to standard error at the end.
+for the debuggee, and print the debug filespec to the terminal at the end.
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 $ DEBUG=debug[tee]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.
@@ -87,10 +87,15 @@ fi
 
 [ -n "$DEBUG" ] || exec cat
 
+printfToTerm()
+{
+    { printf >/dev/tty "$@"; } 2>/dev/null
+}
+
 finally()
 {
     if [ -s "$debugteeFilespec" ]; then
-	printf >&2 "%s%s'd to %q\\n" "$PS4" "$scriptName" "$debugteeFilespec"
+	printfToTerm "%s%s'd to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$debugteeFilespec"
     elif [ -e "$debugteeFilespec" ]; then
 	# Clean up an empty debug log.
 	rm --force -- "$debugteeFilespec" || :
@@ -124,7 +129,7 @@ case ",${DEBUG}," in
 	tee ${isAppend:+--append} -- "$debugteeFilespec"
 	;;
     *,@(debug|${scriptName}),*)
-	printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;&
     *)	exec cat
 esac
