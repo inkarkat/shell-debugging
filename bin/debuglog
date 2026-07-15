@@ -71,7 +71,9 @@ case ",${DEBUG:-}," in
 	    *)		    : ${debuglogFilespec:="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
-	log "$debuggee (${module}${module:+, }${PPID}) $*" >> "$debuglogFilespec"
+	PRETTYPRINTQUOTEDARGS_PREFIX="$(log "$debuggee (${module}${module:+, }${PPID}) ")" \
+	    prettyPrintQuotedArgs -- "$@" \
+		>> "$debuglogFilespec"
 	;;
     *,@(debug|${scriptName}),*)
 	printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
