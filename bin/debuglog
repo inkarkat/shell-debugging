@@ -8,7 +8,7 @@ printShortUsage()
     [ "$isLogF" ] \
 	&& local args='[--prefix PREFIX [--prefix ...]] [--suffix SUFFIX [--suffix ...]] [--] FORMAT [ARG ...]' \
 	|| local args='[--] [MESSAGE ...]'
-    printf 'Usage: %q %s\n' "$(basename "$1")${isLogF:+f}" "[--for DEBUGGEE] [-m|--module MODULE] $args [-?|-h|--help]"
+    printf 'Usage: [DEBUG[LOG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")${isLogF:+f}" "[--for DEBUGGEE] [-m|--module MODULE] $args [-?|-h|--help]"
 }
 printUsage()
 {
@@ -23,7 +23,8 @@ printLongUsage()
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
 ${isLogF:+Format and }Log MESSAGE (in the format TIMESTAMP (PID) MESSAGE ...) to a debug
-file (DEBUGGEE.log) if debugging is enabled for the caller:
+file (DEBUGGEE.log) / \$DEBUGLOG_SINK / \$DEBUG_LOG if debugging is enabled for
+the caller:
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 With "DEBUG=debug[log]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
 FILESPEC instead.
@@ -73,16 +74,16 @@ fi
 case ",${DEBUG:-}," in
     *,${debuggee}${module:+:}${module},*)
 	case ",${DEBUG:-}," in
-	    *,@(debug|${scriptName})=*,*) debuglogFilespec=",${DEBUG},"; debuglogFilespec="${debuglogFilespec#*,@(debug|${scriptName})=}"; debuglogFilespec="${debuglogFilespec%%,*}"
+	    *,@(debug|${scriptName})=*,*) DEBUGLOG_SINK=",${DEBUG},"; DEBUGLOG_SINK="${DEBUGLOG_SINK#*,@(debug|${scriptName})=}"; DEBUGLOG_SINK="${DEBUGLOG_SINK%%,*}"
 			    ;;
-	    *)		    : ${debuglogFilespec:="${PWD}/${debuggee//:/-}.log"};;
+	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
 	if [ "$isLogF" ]; then
-	    logf --prefix "$debuggee (${module}${module:+, }${PPID}) " "$@" >> "$debuglogFilespec"
+	    logf --prefix "$debuggee (${module}${module:+, }${PPID}) " "$@"
 	else
-	    log "$debuggee (${module}${module:+, }${PPID})" "$@" >> "$debuglogFilespec"
-	fi
+	    log "$debuggee (${module}${module:+, }${PPID})" "$@"
+	fi >> "${DEBUGLOG_SINK:-$DEBUG_SINK}"
 	;;
     *,@(debug|${scriptName}),*)
 	{ printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null

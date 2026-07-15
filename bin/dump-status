@@ -7,7 +7,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [DUMPSTATUS_SINK=FILESPEC|&N] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[-v|--verbose] [-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--]' 'COMMAND [ARG ...] [-?|-h|--help]'
+    printf 'Usage: [[DUMPSTATUS|DEBUG]_SINK=FILESPEC|&N] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[-v|--verbose] [-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--]' 'COMMAND [ARG ...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -22,7 +22,7 @@ printLongUsage()
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
 Print the exit status of the supplied command-line to standard error /
-\$DUMPSTATUS_SINK.
+\$DUMPSTATUS_SINK / \$DEBUG_SINK.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
@@ -93,7 +93,7 @@ if [ "$isOnDebug" ]; then
 		*,@(debug|${scriptName})=*,*)
 		    DUMPSTATUS_SINK=",${DEBUG},"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK#*,@(debug|${scriptName})=}"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK%%,*}"
 		    ;;
-		*)  : ${DUMPSTATUS_SINK:="${PWD}/${debuggee//:/-}.log"};;
+		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	    esac
 	    ;;
 	*,@(debug|${scriptName}),*)
@@ -103,10 +103,11 @@ if [ "$isOnDebug" ]; then
     esac
 fi
 
-case "$DUMPSTATUS_SINK" in
+sink="${DUMPSTATUS_SINK:-${isOnDebug:+$DEBUG_SINK}}"
+case "$sink" in
     '')		exec >&2;;
-    \&[0-9])	eval "exec >$DUMPSTATUS_SINK";;
-    ?*)		exec >>"$DUMPSTATUS_SINK";;
+    \&[0-9])	eval "exec >$sink";;
+    ?*)		exec >>"$sink";;
 esac
 
 [ $# -gt 0 ] || exit 1
@@ -118,7 +119,7 @@ else
     printf '%s (%d)\n' "$1" "$status"
 fi
 
-if [ "$isOnDebug" ] && [ -n "$DUMPSTATUS_SINK" ]; then
-    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$DUMPSTATUS_SINK"
+if [ "$isOnDebug" ] && [ -n "$sink" ]; then
+    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
 fi
 exit $status

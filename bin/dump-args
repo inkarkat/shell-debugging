@@ -33,7 +33,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [DUMPARGS_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$generalArgs [--] [ARG ...] [-?|-h|--help]"
+    printf 'Usage: [[DUMPARGS|DEBUG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$generalArgs [--] [ARG ...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -48,7 +48,7 @@ printLongUsage()
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
 Just print all supplied command-line arguments to standard error /
-\$DUMPARGS_SINK.
+\$DUMPARGS_SINK / \$DEBUG_SINK.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
@@ -128,7 +128,7 @@ if [ "$isOnDebug" ]; then
 		*,@(debug|${scriptName})=*,*)
 		    DUMPARGS_SINK=",${DEBUG},"; DUMPARGS_SINK="${DUMPARGS_SINK#*,@(debug|${scriptName})=}"; DUMPARGS_SINK="${DUMPARGS_SINK%%,*}"
 		    ;;
-		*)  : ${DUMPARGS_SINK:="${PWD}/${debuggee//:/-}.log"};;
+		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	    esac
 	    ;;
 	*,@(debug|${scriptName}),*)
@@ -139,10 +139,11 @@ if [ "$isOnDebug" ]; then
     esac
 fi
 
-case "$DUMPARGS_SINK" in
+sink="${DUMPARGS_SINK:-${isOnDebug:+$DEBUG_SINK}}"
+case "$sink" in
     '')		exec >&2;;
-    \&[0-9])	eval "exec >$DUMPARGS_SINK";;
-    ?*)		exec >>"$DUMPARGS_SINK";;
+    \&[0-9])	eval "exec >$sink";;
+    ?*)		exec >>"$sink";;
 esac
 
 if [ "$isVerbose" ]; then
@@ -169,6 +170,6 @@ else
     fi
 fi
 
-if [ $# -gt 0 ] && [ "$isOnDebug" ] && [ -n "$DUMPARGS_SINK" ]; then
-    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$DUMPARGS_SINK"
+if [ $# -gt 0 ] && [ "$isOnDebug" ] && [ -n "$sink" ]; then
+    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
 fi

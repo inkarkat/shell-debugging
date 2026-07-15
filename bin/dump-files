@@ -7,7 +7,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [DUMPFILES_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[-n|--number] [--no-header|-d|--description DESCRIPTION] [-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--] [-|FILE ...] [-?|-h|--help]'
+    printf 'Usage: [[DUMPFILES|DEBUG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[-n|--number] [--no-header|-d|--description DESCRIPTION] [-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--] [-|FILE ...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -22,7 +22,7 @@ printLongUsage()
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
 Just print the contents of all supplied FILE(s) to standard error /
-\$DUMPFILES_SINK.
+\$DUMPFILES_SINK / \$DEBUG_SINK.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
@@ -102,7 +102,7 @@ if [ "$isOnDebug" ]; then
 		*,@(debug|${scriptName})=*,*)
 		    DUMPFILES_SINK=",${DEBUG},"; DUMPFILES_SINK="${DUMPFILES_SINK#*,@(debug|${scriptName})=}"; DUMPFILES_SINK="${DUMPFILES_SINK%%,*}"
 		    ;;
-		*)  : ${DUMPFILES_SINK:="${PWD}/${debuggee//:/-}.log"};;
+		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	    esac
 	    ;;
 	*,@(debug|${scriptName}),*)
@@ -113,17 +113,18 @@ if [ "$isOnDebug" ]; then
     esac
 fi
 
-case "$DUMPFILES_SINK" in
+sink="${DUMPFILES_SINK:-${isOnDebug:+$DEBUG_SINK}}"
+case "$sink" in
     '')		exec >&2;;
-    \&[0-9])	eval "exec >$DUMPFILES_SINK";;
-    ?*)		exec >>"$DUMPFILES_SINK";;
+    \&[0-9])	eval "exec >$sink";;
+    ?*)		exec >>"$sink";;
 esac
 
 [ $# -gt 0 ] || exit 1
 
 if [ "$isHeader" ]; then
     isFirst=t
-    [ "$isOnDebug" ] && [ -s "$DUMPFILES_SINK" ] && isFirst=
+    [ "$isOnDebug" ] && [ -s "$sink" ] && isFirst=
     let count=0
     for filespec
     do
@@ -140,6 +141,6 @@ elif [ $# -gt 0 ]; then
     cat ${isNumber:+--number} -- "$@"
 fi
 
-if [ "$isOnDebug" ] && [ -n "$DUMPFILES_SINK" ]; then
-    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$DUMPFILES_SINK"
+if [ "$isOnDebug" ] && [ -n "$sink" ]; then
+    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
 fi
