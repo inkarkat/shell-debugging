@@ -85,6 +85,7 @@ addDebug()
 	add "${commandName}${module:+:}${module}"
     done
 }
+programName=
 addDebugCommand()
 {
     local cmd="${1:?}"; shift
@@ -93,6 +94,11 @@ addDebugCommand()
 	printf >&2 'ERROR: Could not determine command name for %s\n' "$cmd"
 	return 1
     fi
+
+    if [[ "$cmd" =~ ^(\.|source)[[:space:]]+ ]]; then
+	: ${programName:=$commandName}
+    fi
+
     addDebug "$commandName"
 }
 
@@ -282,6 +288,7 @@ if [ "$isVerbose" ]; then
 fi
 
 export DEBUG
+[ -z "$programName" ] || BASH_ARGV0="$programName"	# Bash 5+ only
 
 eval "${viewer:+{ }${commands}${viewer:+;\} 3>&1 1>&2 2>&3 3>&- }" \
     "${viewer:+|}" '"${viewer[@]}"' "${viewer:+ 3>&1 1>&2 2>&3 3>&-}"
