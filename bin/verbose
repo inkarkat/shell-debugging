@@ -10,7 +10,9 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [VERBOSE_IFS=STRING|newline] [VERBOSE_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--] COMMAND [ARG ...] [-?|-h|--help]'
+    printf 'Usage: [VERBOSE_IFS=STRING|newline] [VERBOSE_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [--] COMMAND [ARG ...] [-?|-h|--help]'
+    echo
+    printf 'Usage: [VERBOSE_IFS=STRING|newline] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[--eval] -D|--on-debug [--for DEBUGGEE] [-m|--module MODULE] [--]' 'COMMAND [ARG ...]'
 }
 printUsage()
 {

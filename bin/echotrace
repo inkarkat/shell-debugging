@@ -7,9 +7,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_TRACEFILE=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [--] [SIMPLECOMMAND ...] [-?|-h|--help]'
-    echo
-    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_TRACEFILE=FILESPEC|&N] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[--for DEBUGGEE [-m|--module MODULE]]' '[...] [--] [SIMPLECOMMAND ...]'
+    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_TRACEFILE=FILESPEC|&N] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[--eval] [--for DEBUGGEE [-m|--module MODULE]] [--]' 'COMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
