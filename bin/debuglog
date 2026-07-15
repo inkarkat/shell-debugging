@@ -1,23 +1,50 @@
 #!/bin/bash
 shopt -qs extglob
 
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--] COMMAND [...] [-?|-h|--help]'
+}
 printUsage()
 {
-    cat <<HELPTEXT
-Log COMMAND (in the format TIMESTAMP (PID) COMMAND ...) to standard error if
-debugging is enabled for the caller: DEBUG=DEBUGGEE DEBUGGEE
-With "DEBUG=debuglog=FILESPEC,DEBUGGEE DEBUGGEE" will log to FILESPEC instead.
-With "DEBUG=debuglog DEBUGGEE" will show for what DEBUGGEE it will enable (if
-not actually enabled).
-HELPTEXT
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [--] COMMAND [...] [-?|-h|--help]'
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
 }
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Log COMMAND (in the format TIMESTAMP (PID) COMMAND ...) to standard error if
+debugging is enabled for the caller: DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+With "DEBUG=debuglog=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
+FILESPEC instead.
+With "DEBUG=debuglog DEBUGGEE ..." will show for what DEBUGGEE it will
+enable (if not actually enabled).
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
+			parent process.
+    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
+			enabled.
+HELPTEXT
+}
+
 debuggee=
+module=
 while [ $# -ne 0 ]
 do
     case "$1" in
-	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--for)		shift; debuggee="${1?}"; shift;;
+	--module|-m)	shift; module="${1:?}"; shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -31,21 +58,21 @@ if [ -z "$debuggee" ]; then
 	IFS= read -r -d '' debuglogCmd
 	IFS= read -r -d '' debuglogSecond
     } < /proc/${PPID}/cmdline
-    debuggee="$(commandName --no-interpreter -- "$debuglogCmd" "$debuglogSecond")"
+    debuggee="$(commandName --no-interpreter --undefined debuglog -- "$debuglogCmd" "$debuglogSecond")"
 fi
 
 case ",${DEBUG:-}," in
-    *,$debuggee,*)
+    *,${debuggee}${module:+:}${module},*)
 	case ",${DEBUG:-}," in
 	    *,debuglog=*,*) debuglogFilespec=",${DEBUG},"; debuglogFilespec="${debuglogFilespec#*,debuglog=}"; debuglogFilespec="${debuglogFilespec%%,*}"
-			    log "$debuggee ($PPID) $*" >> "$debuglogFilespec"
+			    log "$debuggee (${module}${module:+, }${PPID}) $*" >> "$debuglogFilespec"
 			    ;;
-	    *)		    log "$debuggee ($PPID) $*" >&2
+	    *)		    log "$debuggee (${module}${module:+, }${PPID}) $*" >&2
 			    ;;
 	esac
 	;;
     *,debuglog,*)
-	printf >&2 'debuglog: Will activate with DEBUG=%q\n' "$debuggee"
+	printf >&2 'debuglog: Will activate with DEBUG=%q\n' "${debuggee}${module:+:}${module}"
 	;;
 esac
 
