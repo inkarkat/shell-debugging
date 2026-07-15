@@ -21,7 +21,8 @@ printLongUsage()
     # This is the long "man page" when launched with the help argument.
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
-Print the exit status of the supplied command-line to standard error.
+Print the exit status of the supplied command-line to standard error /
+\$DUMPSTATUS_SINK.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
