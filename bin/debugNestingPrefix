@@ -1,0 +1,11 @@
+#!/bin/bash
+
+: ${DEBUGNESTINGPREFIX_BASE:=2}
+: ${PS4:='+ '}
+
+nestingPrefix=
+if [ $SHLVL -gt $DEBUGNESTINGPREFIX_BASE ]; then
+    nesting="${PS4:0:1}"
+    printf -v nestingPrefix "%$((SHLVL - DEBUGNESTINGPREFIX_BASE))s" "$nesting"
+    printf %s%s "${nestingPrefix// /$nesting}" "${PS4:1}"
+fi

@@ -45,7 +45,7 @@ HELPTEXT
 printer()
 {
     PRETTYPRINTQUOTEDARGS_IFS="$ECHOTRACE_IFS" \
-	PRETTYPRINTQUOTEDARGS_PREFIX="$tracePrefix" \
+    PRETTYPRINTQUOTEDARGS_PREFIX="$nestingPrefix" \
 	exec prettyPrintQuotedArgs -- "$@" >&3
 }
 executor()
@@ -71,7 +71,7 @@ do
 			    }
 			    printer()
 			    {
-				joinBy >&3 --prefix "${tracePrefix}" -- "$ECHOTRACE_IFS" "$@"
+				joinBy >&3 --prefix "${nestingPrefix}" -- "$ECHOTRACE_IFS" "$@"
 			    }
 			fi
 			;;
@@ -97,14 +97,7 @@ case "$ECHOTRACE_TRACEFILE" in
     ?*)		exec 3>>"$ECHOTRACE_TRACEFILE";;
 esac
 
-# Duplicated to verbose
-nestingPrefix=
-if [ $SHLVL -gt 3 ]; then
-    nesting="${PS4:0:1}"
-    printf -v nestingPrefix "%$((SHLVL - 3))s" "$nesting"; printf -v nestingPrefix %s "${nestingPrefix// /$nesting}"
-fi
-tracePrefix="${nestingPrefix}${PS4:-\$ }"
-
-ECHOTRACE_IFS="${ECHOTRACE_IFS//$'\n'/$'\n'${tracePrefix}}"
+nestingPrefix="$(debugNestingPrefix)"
+ECHOTRACE_IFS="${ECHOTRACE_IFS//$'\n'/$'\n'${nestingPrefix}}"
 
 printer "$@"

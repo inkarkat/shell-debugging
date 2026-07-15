@@ -58,7 +58,7 @@ HELPTEXT
 printer()
 {
     PRETTYPRINTQUOTEDARGS_IFS="$VERBOSE_IFS" \
-	PRETTYPRINTQUOTEDARGS_PREFIX="$tracePrefix" \
+    PRETTYPRINTQUOTEDARGS_PREFIX="$nestingPrefix" \
 	prettyPrintQuotedArgs -- "$@" >&3
 }
 executor()
@@ -83,7 +83,7 @@ do
 			    shift
 			    printer()
 			    {
-				joinBy >&3 --prefix "${tracePrefix}" -- "$VERBOSE_IFS" "$@"
+				joinBy >&3 --prefix "${nestingPrefix}" -- "$VERBOSE_IFS" "$@"
 			    }
 			    executor()
 			    {
@@ -136,15 +136,8 @@ if [ "$isActive" ]; then
 	?*)		exec 3>>"$VERBOSE_SINK";;
     esac
 
-    # Duplicated to echotrace
-    nestingPrefix=
-    if [ $SHLVL -gt 3 ]; then
-	nesting="${PS4:0:1}"
-	printf -v nestingPrefix "%$((SHLVL - 3))s" "$nesting"; printf -v nestingPrefix %s "${nestingPrefix// /$nesting}"
-    fi
-    tracePrefix="${nestingPrefix}${PS4:-\$ }"
-
-    VERBOSE_IFS="${VERBOSE_IFS//$'\n'/$'\n'${tracePrefix}}"
+    nestingPrefix="$(debugNestingPrefix)"
+    VERBOSE_IFS="${VERBOSE_IFS//$'\n'/$'\n'${nestingPrefix}}"
 
     printer "$@"
 fi
