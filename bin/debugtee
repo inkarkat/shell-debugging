@@ -49,7 +49,9 @@ HELPDESCRIPTION
     --to FILE		Use FILE instead of the default debug file
 			DEBUGGEE[-MODULE].log (unless overridden).
 SEE ALSO:
-- echotrace writes arguments as an execution trace to stderr instead of
+- dump-files [--on-debug] prints file contents, not pipelined standard input to
+  a debug file.
+- echotrace writes arguments as an execution trace to standard error instead of
   executing the passed command when debugging is enabled.
 HELPTEXT
 }

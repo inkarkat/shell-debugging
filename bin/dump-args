@@ -54,6 +54,9 @@ HELPDESCRIPTION
     echo
     getLongUsage
     cat <<HELPTEXT
+SEE ALSO:
+- dump-args-exec also executes COMMAND in addition to printing them.
+
 EXIT STATUS:
     0	Complete success.
     2	Bad invocation, wrong or missing command-line arguments.

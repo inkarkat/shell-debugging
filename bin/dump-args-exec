@@ -27,6 +27,8 @@ HELPDESCRIPTION
     dump-args --get-long-usage 2>/dev/null
     cat <<HELPTEXT
 SEE ALSO:
+- debuglog also executes COMMAND and logs when debugging is enabled, and with
+  prepended timestamp and PID.
 - verbose also executes and writes as an execution trace. Prefer that unless you
   need the array-like output formatting of dump-args.
 

@@ -44,6 +44,10 @@ $ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will ena
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
+SEE ALSO:
+- debugtee duplicates stdin to a debug file when debugging is enabled.
+- dump-args prints command-line arguments, not file contents to standard error.
+
 EXIT STATUS:
     0	Complete success.
     1	No FILE(s).
