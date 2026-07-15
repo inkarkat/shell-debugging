@@ -70,7 +70,7 @@ executor()
 EXEC=exec
 isActive=t
 isOnDebug=
-debuggee=
+debuggee="$DEBUG_DEBUGGEE"
 module=
 while [ $# -ne 0 ]
 do
