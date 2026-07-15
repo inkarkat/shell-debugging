@@ -47,6 +47,13 @@ $ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will ena
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
+SEE ALSO:
+- debuglog also executes COMMAND and logs when debugging is enabled, and with
+  prepended timestamp and PID.
+
+EXIT STATUS:
+    2	Bad invocation, wrong or missing command-line arguments.
+    *	Any exit status from COMMAND(s).
 HELPTEXT
 }
 

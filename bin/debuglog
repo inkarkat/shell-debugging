@@ -35,6 +35,14 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
+
+SEE ALSO:
+- verbose also executes COMMAND and logs unconditionally to standard error. With
+  --on-debug, it works like debuglog, but without the timestamp and PID.
+
+EXIT STATUS:
+    2	Bad invocation, wrong or missing command-line arguments.
+    *	Any exit status from COMMAND(s).
 HELPTEXT
 }
 
