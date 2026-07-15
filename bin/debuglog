@@ -19,8 +19,9 @@ printLongUsage()
     # This is the long "man page" when launched with the help argument.
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
-Log COMMAND (in the format TIMESTAMP (PID) COMMAND ...) to standard error if
-debugging is enabled for the caller: DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+Log COMMAND (in the format TIMESTAMP (PID) COMMAND ...) to a debug file
+(DEBUGGEE.log) if debugging is enabled for the caller:
+DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 With "DEBUG=debug[log]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
 FILESPEC instead.
 With "DEBUG=debug[log] DEBUGGEE ..." will show for what DEBUGGEE it will
@@ -66,11 +67,11 @@ case ",${DEBUG:-}," in
     *,${debuggee}${module:+:}${module},*)
 	case ",${DEBUG:-}," in
 	    *,@(debug|${scriptName})=*,*) debuglogFilespec=",${DEBUG},"; debuglogFilespec="${debuglogFilespec#*,@(debug|${scriptName})=}"; debuglogFilespec="${debuglogFilespec%%,*}"
-			    log "$debuggee (${module}${module:+, }${PPID}) $*" >> "$debuglogFilespec"
 			    ;;
-	    *)		    log "$debuggee (${module}${module:+, }${PPID}) $*" >&2
-			    ;;
+	    *)		    : ${debuglogFilespec:="${PWD}/${debuggee//:/-}.log"};;
 	esac
+
+	log "$debuggee (${module}${module:+, }${PPID}) $*" >> "$debuglogFilespec"
 	;;
     *,@(debug|${scriptName}),*)
 	printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
