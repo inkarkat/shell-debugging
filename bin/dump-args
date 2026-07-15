@@ -113,7 +113,7 @@ if [ "$isOnDebug" ]; then
     case ",${DEBUG:-}," in
 	*,${debuggee}${module:+:}${module},*)
 	    ;;
-	*,${scriptName},*)
+	*,@(debug|${scriptName}),*)
 	    printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    exit 99
 	    ;;

@@ -1,4 +1,5 @@
 #!/bin/bash
+shopt -qs extglob
 
 printShortUsage()
 {
@@ -23,9 +24,9 @@ printLongUsage()
 Duplicate standard input to a debug file (DEBUGGEE.log) if debugging is enabled
 for the debuggee, and print the debug filespec to standard error at the end.
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-$ DEBUG=debugtee=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
+$ DEBUG=debug[tee]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.
-$ DEBUG=debugtee DEBUGGEE ... will show for what DEBUGGEE it will enable (if not
+$ DEBUG=debug[tee] DEBUGGEE ... will show for what DEBUGGEE it will enable (if not
   actually enabled).
 HELPDESCRIPTION
     echo
@@ -106,7 +107,7 @@ fi
 case ",${DEBUG}," in
     *,${debuggee}${module:+:}${module},*)
 	case ",${DEBUG}," in
-	    *,${scriptName}=*,*) filespec=",${DEBUG},"; filespec="${filespec#*,${scriptName}=}"; filespec="${filespec%%,*}"
+	    *,@(debug|${scriptName})=*,*) filespec=",${DEBUG},"; filespec="${filespec#*,@(debug|${scriptName})=}"; filespec="${filespec%%,*}"
 			    debugteeFilespec="$(realpath --no-symlinks -- "$filespec")" || debugteeFilespec="$filespec"
 			    ;;
 	    *)		    : ${debugteeFilespec:="${PWD}/${debuggee//:/-}.log"};;
@@ -120,7 +121,7 @@ case ",${DEBUG}," in
 	fi
 	tee ${isAppend:+--append} -- "$debugteeFilespec"
 	;;
-    *,${scriptName},*)
+    *,@(debug|${scriptName}),*)
 	printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;&
     *)	exec cat

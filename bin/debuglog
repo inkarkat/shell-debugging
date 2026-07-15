@@ -21,9 +21,9 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 Log COMMAND (in the format TIMESTAMP (PID) COMMAND ...) to standard error if
 debugging is enabled for the caller: DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debuglog=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
+With "DEBUG=debug[log]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
 FILESPEC instead.
-With "DEBUG=debuglog DEBUGGEE ..." will show for what DEBUGGEE it will
+With "DEBUG=debug[log] DEBUGGEE ..." will show for what DEBUGGEE it will
 enable (if not actually enabled).
 HELPDESCRIPTION
     echo
@@ -65,14 +65,14 @@ fi
 case ",${DEBUG:-}," in
     *,${debuggee}${module:+:}${module},*)
 	case ",${DEBUG:-}," in
-	    *,${scriptName}=*,*) debuglogFilespec=",${DEBUG},"; debuglogFilespec="${debuglogFilespec#*,${scriptName}=}"; debuglogFilespec="${debuglogFilespec%%,*}"
+	    *,@(debug|${scriptName})=*,*) debuglogFilespec=",${DEBUG},"; debuglogFilespec="${debuglogFilespec#*,@(debug|${scriptName})=}"; debuglogFilespec="${debuglogFilespec%%,*}"
 			    log "$debuggee (${module}${module:+, }${PPID}) $*" >> "$debuglogFilespec"
 			    ;;
 	    *)		    log "$debuggee (${module}${module:+, }${PPID}) $*" >&2
 			    ;;
 	esac
 	;;
-    *,${scriptName},*)
+    *,@(debug|${scriptName}),*)
 	printf >&2 '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;;
 esac
