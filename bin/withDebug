@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-a|--append|-P|--no-pager|-i|--inbox] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-a|--append|-P|--no-pager] [--to FILE|-i|--inbox] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -41,6 +41,8 @@ HELPDESCRIPTION
 			file instead of overwriting it.
     --no-pager|-P	Don't open the debugging diagnostics in the pager after
 			the execution.
+    --to FILE		Write the debugging diagnostics into FILE instead of the
+			default COMMAND.log (using the first passed COMMAND).
     --inbox|-i		Write the debugging diagnostics into the inbox.
     --interactive|-I	Source the COMMAND in an interactive shell. Only works
 			if COMMAND starts with "." or "source".
@@ -139,6 +141,7 @@ handleRecall()
     local overrideVerbose=
     local overridePaginate=
     local overrideInbox=
+    local overrideTo=
     typeset -A overrideFor=()
     typeset -A overrideModules=()
     typeset -A overrideOnlyModules=()
@@ -150,6 +153,7 @@ handleRecall()
 	    --verbose|-v)	shift; overrideVerbose=t;;
 	    --no-pager|-P)	shift; overridePaginate=t;;
 	    --inbox|-i)		shift; overrideInbox=t;;
+	    --to)		shift; overrideTo="$1"; shift;;
 	    --for)		shift; overrideFor["$1"]=t; shift;;
 	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
 	    --only-module|-M)	shift; overrideOnlyModules["$1"]=t; shift;;
@@ -171,6 +175,7 @@ handleRecall()
 	    --verbose|-v)	[ "$overrideVerbose" ] && overrideVerbose= || allargs+=("$1"); shift;;
 	    --no-pager|-P)	[ "$overridePaginate" ] && overridePaginate= || allargs+=("$1"); shift;;
 	    --inbox|-i)		[ "$overrideInbox" ] && overrideInbox= || allargs+=("$1"); shift;;
+	    --to)		[ -n "$overrideTo" ] && overrideTo= || allargs+=("$1" "$2"); shift; shift;;
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["$2"]}" ] && unset "overrideModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --only-module|-M)   [ "${overrideOnlyModules["$2"]}" ] && unset "overrideOnlyModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
@@ -187,6 +192,7 @@ handleRecall()
     [ "$overrideVerbose" ] && newArgs+=(--verbose)
     [ "$overridePaginate" ] && newArgs+=(--no-pager)
     [ "$overrideInbox" ] && newArgs+=(--inbox)
+    [ -n "$overrideTo" ] && newArgs+=(--to "$overrideTo")
     local arg
     for arg in "${!overrideFor[@]}"
     do
@@ -229,6 +235,7 @@ do
 
 	--append|-a)	shift; isAppend=t;;
 	--no-pager|-P)	shift; pager=();;
+	--to)		shift; sink="${1:?}"; shift;;
 	--inbox|-i)	shift; captureCommand=(saveToInbox); pager=();;
 	--interactive|-I)
 			shift; isInteractive=t;;
@@ -288,7 +295,12 @@ if [ $# -ne 0 ]; then
     addCommand "$quotedSimpleCommand"
     let commandCnt+=1
 fi
-if [ -z "$commands" ]; then
+if [ -n "$sink" -a ${#captureCommand[@]} -gt 0 ]; then
+    echo 'ERROR: Cannot combine --to FILE with --inbox.'
+    echo
+    printUsage "$0"
+    exit 2
+elif [ -z "$commands" ]; then
     echo "ERROR: No COMMAND(s) specified; need to pass -c|--command \"COMMANDLINE\", or --exec SIMPLECOMMAND [...] $WITHDEBUG_EXEC_END or SIMPLECOMMAND."
     echo
     printUsage "$0"
@@ -308,7 +320,6 @@ fi
 
 export DEBUG
 
-sink=
 if [ -n "$programName" ]; then
     shift   # .|source
     shift   # $programName
@@ -318,9 +329,9 @@ if [ -n "$programName" ]; then
     if [ "$isInteractive" ]; then
 	printf -v commands 'bash -i -c %q' "$commands"
     fi
-    sink="${programName}.log"
+    : ${sink:="${programName}.log"}
 else
-    sink="${commandNames[0]:?}.log"
+    : ${sink:="${commandNames[0]:?}.log"}
 fi
 
 if [ ${#captureCommand[@]} -gt 0 ]; then
@@ -345,7 +356,7 @@ if [ ${#captureCommand[@]} -gt 0 ]; then
     trap closeFifo EXIT
 else
     [ "$isAppend" ] || : > "$sink"
-    exec 3>>"$sink"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
+    exec 3>>"${sink:?}"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
 
     if [ ${#pager[@]} -gt 0 ]; then
 	openPager() { "${pager[@]}" "$sink"; }
