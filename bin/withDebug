@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-P|--no-pager|-i|--inbox] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-a|--append|-P|--no-pager|-i|--inbox] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -37,6 +37,8 @@ HELPDESCRIPTION
     printShortUsage "$1"
     echo
     cat <<HELPTEXT
+    --append|-a		Append the debugging diagnostics to the existing log
+			file instead of overwriting it.
     --no-pager|-P	Don't open the debugging diagnostics in the pager after
 			the execution.
     --inbox|-i		Write the debugging diagnostics into the inbox.
@@ -132,6 +134,7 @@ handleRecall()
 	exit 1
     fi
 
+    local overrideAppend=
     local overrideInteractive=
     local overrideVerbose=
     local overridePaginate=
@@ -142,6 +145,7 @@ handleRecall()
     while [ $# -ne 0 ]
     do
 	case "$1" in
+	    --append|-a)	shift; overrideAppend=t;;
 	    --interactive|-I)	shift; overrideInteractive=t;;
 	    --verbose|-v)	shift; overrideVerbose=t;;
 	    --no-pager|-P)	shift; overridePaginate=t;;
@@ -162,6 +166,7 @@ handleRecall()
     while [ $# -ne 0 ]
     do
 	case "$1" in
+	    --append|-a)	[ "$overrideAppend" ] && overrideAppend= || allargs+=("$1"); shift;;
 	    --interactive|-I)	[ "$overrideInteractive" ] && overrideInteractive= || allargs+=("$1"); shift;;
 	    --verbose|-v)	[ "$overrideVerbose" ] && overrideVerbose= || allargs+=("$1"); shift;;
 	    --no-pager|-P)	[ "$overridePaginate" ] && overridePaginate= || allargs+=("$1"); shift;;
@@ -177,6 +182,7 @@ handleRecall()
     # Add those arguments given to the recall that were not used to remove any
     # recalled arguments.
     typeset -a newArgs=()
+    [ "$overrideAppend" ] && newArgs+=(--append)
     [ "$overrideInteractive" ] && newArgs+=(--interactive)
     [ "$overrideVerbose" ] && newArgs+=(--verbose)
     [ "$overridePaginate" ] && newArgs+=(--no-pager)
@@ -205,6 +211,7 @@ saveToInbox()
 }
 
 typeset -a allargs=("$@")
+isAppend=
 isInteractive=
 isVerbose=
 commands=
@@ -217,6 +224,8 @@ do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--recall)	shift; handleRecall "$@"; set -- "${allargs[@]}";;
+
+	--append|-a)	shift; isAppend=t;;
 	--no-pager|-P)	shift; viewer=();;
 	--inbox|-i)	shift; viewer=(saveToInbox);;
 	--interactive|-I)
@@ -310,6 +319,8 @@ if [ -n "$programName" ]; then
 else
     export DEBUG_SINK="${commandNames[0]:?}.log"
 fi
+
+[ "$isAppend" ] || : > "$DEBUG_SINK"
 
 openPager()
 {
