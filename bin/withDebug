@@ -296,6 +296,7 @@ if [ "$isVerbose" ]; then
 fi
 
 export DEBUG
+
 if [ -n "$programName" ]; then
     shift   # .|source
     shift   # $programName
@@ -305,7 +306,15 @@ if [ -n "$programName" ]; then
     if [ "$isInteractive" ]; then
 	printf -v commands 'bash -i -c %q' "$commands"
     fi
+    export DEBUG_SINK="${programName}.log"
+else
+    export DEBUG_SINK="${commandNames[0]:?}.log"
 fi
 
-eval "${viewer:+{ }${commands}${viewer:+;\} 3>&1 1>&2 2>&3 3>&- }" \
-    "${viewer:+|}" '"${viewer[@]}"' "${viewer:+ 3>&1 1>&2 2>&3 3>&-}"
+openPager()
+{
+    "${debugPager[@]}" "$DEBUG_SINK"
+}
+[ ${#debugPager[@]} -eq 0 ] || trap openPager EXIT
+
+eval "$commands"
