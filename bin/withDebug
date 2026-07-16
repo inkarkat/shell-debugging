@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-a|--append|-P|--no-pager] [--to FILE|-i|--inbox] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -44,6 +44,11 @@ HELPDESCRIPTION
     --to FILE		Write the debugging diagnostics into FILE instead of the
 			default COMMAND.log (using the first passed COMMAND).
     --inbox|-i		Write the debugging diagnostics into the inbox.
+    --to-separate-files|-s
+			Let each COMMAND write its debugging diagnostics into a
+			separate log file (COMMAND.log) instead of collecting
+			everything into a single log file (named after the first
+			passed COMMAND) / the inbox.
     --interactive|-I	Source the COMMAND in an interactive shell. Only works
 			if COMMAND starts with "." or "source".
     --verbose|-v	Print the full command line (with all debugging
@@ -141,6 +146,7 @@ handleRecall()
     local overrideVerbose=
     local overridePaginate=
     local overrideInbox=
+    local overrideSeparateFiles=
     local overrideTo=
     typeset -A overrideFor=()
     typeset -A overrideModules=()
@@ -153,6 +159,8 @@ handleRecall()
 	    --verbose|-v)	shift; overrideVerbose=t;;
 	    --no-pager|-P)	shift; overridePaginate=t;;
 	    --inbox|-i)		shift; overrideInbox=t;;
+	    --to-separate-files|-s)
+				shift; overrideSeparateFiles=t;;
 	    --to)		shift; overrideTo="$1"; shift;;
 	    --for)		shift; overrideFor["$1"]=t; shift;;
 	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
@@ -175,6 +183,8 @@ handleRecall()
 	    --verbose|-v)	[ "$overrideVerbose" ] && overrideVerbose= || allargs+=("$1"); shift;;
 	    --no-pager|-P)	[ "$overridePaginate" ] && overridePaginate= || allargs+=("$1"); shift;;
 	    --inbox|-i)		[ "$overrideInbox" ] && overrideInbox= || allargs+=("$1"); shift;;
+	    --to-separate-files|-s)
+				[ "$overrideSeparateFiles" ] && overrideSeparateFiles= || allargs+=("$1"); shift;;
 	    --to)		[ -n "$overrideTo" ] && overrideTo= || allargs+=("$1" "$2"); shift; shift;;
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["$2"]}" ] && unset "overrideModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
@@ -192,6 +202,7 @@ handleRecall()
     [ "$overrideVerbose" ] && newArgs+=(--verbose)
     [ "$overridePaginate" ] && newArgs+=(--no-pager)
     [ "$overrideInbox" ] && newArgs+=(--inbox)
+    [ "$overrideSeparateFiles" ] && newArgs+=(--to-separate-files)
     [ -n "$overrideTo" ] && newArgs+=(--to "$overrideTo")
     local arg
     for arg in "${!overrideFor[@]}"
@@ -222,7 +233,7 @@ isInteractive=
 isVerbose=
 commands=
 let commandCnt=0
-sink=
+unset sink
 pagerCommand="${PAGER:-less}"
 [ "$pagerCommand" = smartless ] && pagerCommand=less	# smartless does not page small outputs that fit the terminal, but we explicitly want to page through the captured debug diagnostics.
 typeset -a captureCommand=()
@@ -237,6 +248,8 @@ do
 	--no-pager|-P)	shift; pager=();;
 	--to)		shift; sink="${1:?}"; shift;;
 	--inbox|-i)	shift; captureCommand=(saveToInbox); pager=();;
+	--to-separate-files|-s)
+			shift; sink='';;
 	--interactive|-I)
 			shift; isInteractive=t;;
 	--verbose|-v)	shift; isVerbose=t;;
@@ -295,8 +308,8 @@ if [ $# -ne 0 ]; then
     addCommand "$quotedSimpleCommand"
     let commandCnt+=1
 fi
-if [ -n "$sink" -a ${#captureCommand[@]} -gt 0 ]; then
-    echo 'ERROR: Cannot combine --to FILE with --inbox.'
+if [ -n "${sink+t}" -a ${#captureCommand[@]} -gt 0 ]; then
+    echo 'ERROR: Cannot combine --to FILE or -s|--to-separate-files with -i|--inbox.'
     echo
     printUsage "$0"
     exit 2
@@ -329,9 +342,9 @@ if [ -n "$programName" ]; then
     if [ "$isInteractive" ]; then
 	printf -v commands 'bash -i -c %q' "$commands"
     fi
-    : ${sink:="${programName}.log"}
+    : ${sink="${programName}.log"}
 else
-    : ${sink:="${commandNames[0]:?}.log"}
+    : ${sink="${commandNames[0]:?}.log"}
 fi
 
 if [ ${#captureCommand[@]} -gt 0 ]; then
@@ -347,6 +360,7 @@ if [ ${#captureCommand[@]} -gt 0 ]; then
     rm -- "$TMPFIFO" # Unlink the named pipe.
 
     sink='&3'
+    export DEBUG_SINK="$sink"
     export BASH_XTRACEFD=3    # Capture "set -x" output by the log sink command, too.
     closeFifo()
     {
@@ -354,15 +368,17 @@ if [ ${#captureCommand[@]} -gt 0 ]; then
 	wait $capturePID
     }
     trap closeFifo EXIT
+elif [ -n "${sink+t}" -a -z "$sink" ]; then
+    :	# Let each command write to its own log file; do not create a single log file.
 else
     [ "$isAppend" ] || : > "$sink"
     exec 3>>"${sink:?}"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
+    export DEBUG_SINK="$sink"
 
     if [ ${#pager[@]} -gt 0 ]; then
 	openPager() { "${pager[@]}" "$sink"; }
 	trap openPager EXIT
     fi
 fi
-export DEBUG_SINK="$sink"
 
 eval "$commands"
