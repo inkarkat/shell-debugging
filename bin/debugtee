@@ -1,10 +1,11 @@
 #!/bin/bash
+shopt -qs extglob
 
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: cat FILE [...] | %q %s | COMMAND ...\n' "$(basename "$1")" '[-1|--single-capture] [--no-header|-d|--description DESCRIPTION] [--for DEBUGGEE] [-m|--module MODULE] [--to FILE]'
+    printf 'Usage: cat FILE [...] | [DEBUG[TEE]_SINK=FILESPEC|&N] %q %s | COMMAND ...\n' "$(basename "$1")" '[-1|--single-capture] [--no-header|-d|--description DESCRIPTION] [--for DEBUGGEE] [-m|--module MODULE] [--to FILE]'
     printf "Usage: cat FILE [...] | eval \"\${DEBUG:+%q %s |}\" 'COMMAND [...]'\\n" "$(basename "$1")" '...'
     printf "Usage: eval 'COMMAND [...]' \"\${DEBUG:+| %q %s}\"\\n" "$(basename "$1")" '... [--to ${HOME@Q}/out.log}]'
 }
@@ -20,12 +21,13 @@ printLongUsage()
     # This is the long "man page" when launched with the help argument.
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
-Duplicate standard input to a debug file (DEBUGGEE.log) if debugging is enabled
-for the debuggee, and print the debug filespec to standard error at the end.
+Duplicate standard input to a debug file (DEBUGGEE.log) / \$DEBUGTEE_SINK /
+\$DEBUG_SINK if debugging is enabled for the debuggee, and print the debug
+filespec to the terminal at the end.
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-$ DEBUG=debugtee=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
+$ DEBUG=debug[tee]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.
-$ DEBUG=debugtee DEBUGGEE ... will show for what DEBUGGEE it will enable (if not
+$ DEBUG=debug[tee] DEBUGGEE ... will show for what DEBUGGEE it will enable (if not
   actually enabled).
 HELPDESCRIPTION
     echo
@@ -48,14 +50,15 @@ HELPDESCRIPTION
     --to FILE		Use FILE instead of the default debug file
 			DEBUGGEE[-MODULE].log (unless overridden).
 SEE ALSO:
-- echotrace writes arguments as an execution trace to stderr instead of
+- dump-files [--on-debug] prints file contents, not pipelined standard input to
+  a debug file.
+- echotrace writes arguments as an execution trace to standard error instead of
   executing the passed command when debugging is enabled.
 HELPTEXT
 }
 
-debuggee=
+debuggee="$DEBUG_DEBUGGEE"
 module=
-debugteeFilespec=
 isAppend=t
 isHeader=t
 description=
@@ -70,7 +73,7 @@ do
 			shift; description="${1?}"; shift;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
-	--to)		shift; debugteeFilespec="${1:?}"; shift;;
+	--to)		shift; DEBUGTEE_SINK="${1:?}"; shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -84,43 +87,50 @@ fi
 
 [ -n "$DEBUG" ] || exec cat
 
+printfToTerm()
+{
+    { printf >/dev/tty "$@"; } 2>/dev/null
+}
+
 finally()
 {
-    if [ -s "$debugteeFilespec" ]; then
-	printf >&2 "%sDebugtee'd to %q\\n" "$PS4" "$debugteeFilespec"
-    elif [ -e "$debugteeFilespec" ]; then
+    if [ -s "$sink" ]; then
+	printfToTerm "%s%s'd to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
+    elif [ -e "$sink" ]; then
 	# Clean up an empty debug log.
-	rm --force -- "$debugteeFilespec" || :
+	rm --force -- "$sink" || :
     fi
 }
 
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
     {
-	IFS= read -r -d '' debugteeCmd
-	IFS= read -r -d '' debugteeSecond
+	IFS= read -r -d '' debugCmd
+	IFS= read -r -d '' debugSecond
     } < /proc/${PPID}/cmdline
-    debuggee="$(commandName --no-interpreter --undefined debugtee -- "$debugteeCmd" "$debugteeSecond")"
+    debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
 fi
 
 case ",${DEBUG}," in
     *,${debuggee}${module:+:}${module},*)
 	case ",${DEBUG}," in
-	    *,debugtee=*,*) filespec=",${DEBUG},"; filespec="${filespec#*,debugtee=}"; filespec="${filespec%%,*}"
-			    debugteeFilespec="$(realpath --no-symlinks -- "$filespec")" || debugteeFilespec="$filespec"
+	    *,@(debug|${scriptName})=*,*) filespec=",${DEBUG},"; filespec="${filespec#*,@(debug|${scriptName})=}"; filespec="${filespec%%,*}"
+			    DEBUGTEE_SINK="$(realpath --no-symlinks -- "$filespec")" || DEBUGTEE_SINK="$filespec"
 			    ;;
-	    *)		    : ${debugteeFilespec:="${PWD}/${debuggee//:/-}.log"};;
+	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
+	sink="${DEBUGTEE_SINK:-$DEBUG_SINK}"
 	trap finally EXIT
 	if [ "$isHeader" ]; then
-	    isFirst=; [ ! "$isAppend" ] || [ ! -s "$debugteeFilespec" ] && isFirst=t;
-	    eval 'HEADER_STYLE=dashed-line header ${isFirst:+--first} --no-color -- "${description}${description:+ at }$(timestamp --logging)"' ">${isAppend:+>} \"$debugteeFilespec\""
+	    isFirst=; [ ! "$isAppend" ] || [ ! -s "$sink" ] && isFirst=t;
+	    eval 'HEADER_STYLE=dashed-line header ${isFirst:+--first} --no-color -- "${description}${description:+ at }$(timestamp --logging)"' ">${isAppend:+>} \"$sink\""
 	    isAppend=t
 	fi
-	tee ${isAppend:+--append} -- "$debugteeFilespec"
+	tee ${isAppend:+--append} -- "$sink"
 	;;
-    *,debugtee,*)
-	printf >&2 'debugtee: Will activate with DEBUG=%q\n' "${debuggee}${module:+:}${module}"
+    *,@(debug|${scriptName}),*)
+	printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;&
     *)	exec cat
 esac

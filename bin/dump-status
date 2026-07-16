@@ -1,19 +1,66 @@
 #!/bin/bash
+shopt -qs extglob
 
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
+
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: [[DUMPSTATUS|DEBUG]_SINK=FILESPEC|&N] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[-v|--verbose] [-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--]' 'COMMAND [ARG ...] [-?|-h|--help]'
+}
 printUsage()
 {
-    cat <<HELPTEXT
-Print the exit status of the supplied command-line to standard error. With
--v|--verbose also include the full command-line arguments.
-HELPTEXT
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[-v|--verbose] [--] COMMAND [ARG ...] [-?|-h|--help]'
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
 }
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Print the exit status of the supplied command-line to standard error /
+\$DUMPSTATUS_SINK / \$DEBUG_SINK.
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --verbose|-v	Also include the full command-line arguments.
+    --on-debug|-D	Log the exit status to a debug file (DEBUGGEE.log) only
+			when \$DEBUG refers to the DEBUGGEE, and print the debug
+			filespec to the terminal.
+$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+$ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
+  FILE instead.
+$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will enable (if not
+  actually enabled).
+    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
+			parent process.
+    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
+			enabled.
+HELPTEXT
+}
+
 isVerbose=
-case "$1" in
-    --help|-h|-\?)	shift; printUsage "$0"; exit 0;;
-    --verbose|-v)	shift; isVerbose=t;;
-    --)			shift;;
-esac
+isOnDebug=
+debuggee="$DEBUG_DEBUGGEE"
+module=
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--verbose|-v)	shift; isVerbose=t;;
+	--on-debug|-D)	shift; isOnDebug=t;;
+	--for)		shift; debuggee="${1?}"; shift;;
+	--module|-m)	shift; module="${1:?}"; shift;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
 if [ $# -eq 0 ]; then
     echo >&2 'ERROR: No COMMAND passed.'
     echo >&2
@@ -24,10 +71,55 @@ fi
 "$@"
 status=$?
 
+printfToTerm()
+{
+    { printf >/dev/tty "$@"; } 2>/dev/null
+}
+
+if [ "$isOnDebug" ]; then
+    [ -n "$DEBUG" ] || exit 99
+
+    if [ -z "$debuggee" ]; then
+	{
+	    IFS= read -r -d '' debugCmd
+	    IFS= read -r -d '' debugSecond
+	} < /proc/${DUMPARGS_PPID:-$PPID}/cmdline
+	debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
+    fi
+
+    case ",${DEBUG:-}," in
+	*,${debuggee}${module:+:}${module},*)
+	    case ",${DEBUG:-}," in
+		*,@(debug|${scriptName})=*,*)
+		    DUMPSTATUS_SINK=",${DEBUG},"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK#*,@(debug|${scriptName})=}"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK%%,*}"
+		    ;;
+		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+	    esac
+	    ;;
+	*,@(debug|${scriptName}),*)
+	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    ;;
+	*)  exit 99;;
+    esac
+fi
+
+sink="${DUMPSTATUS_SINK:-${isOnDebug:+$DEBUG_SINK}}"
+case "$sink" in
+    '')		exec >&2;;
+    \&[0-9])	eval "exec >$sink";;
+    ?*)		exec >>"$sink";;
+esac
+
+[ $# -gt 0 ] || exit 1
+
 if [ "$isVerbose" ]; then
     quotedArgs=; if [ $# -gt 0 ]; then printf -v quotedArgs '%q ' "$@"; quotedArgs=${quotedArgs% }; fi
-    printf >&2 '%s (%d)\n' "$quotedArgs" "$status"
+    printf '%s (%d)\n' "$quotedArgs" "$status"
 else
-    printf >&2 '%s (%d)\n' "$1" "$status"
+    printf '%s (%d)\n' "$1" "$status"
+fi
+
+if [ "$isOnDebug" ] && [ -n "$sink" ]; then
+    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
 fi
 exit $status

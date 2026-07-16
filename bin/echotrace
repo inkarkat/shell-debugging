@@ -7,9 +7,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_TRACEFILE=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [--] [SIMPLECOMMAND ...] [-?|-h|--help]'
-    echo
-    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_TRACEFILE=FILESPEC|&N] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[--for DEBUGGEE [-m|--module MODULE]]' '[...] [--] [SIMPLECOMMAND ...]'
+    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [[ECHOTRACE|DEBUG]_SINK=FILESPEC|&N] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[--eval] [--for DEBUGGEE [-m|--module MODULE]] [--]' 'COMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -25,7 +23,8 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 Write arguments (separated by a space or \$ECHOTRACE_IFS) as an execution trace
 (i.e. with \$PS4 prepended and indicating the nesting level) to standard error /
-ECHOTRACE_TRACEFILE, like "set -x" would do (but without the execution).
+\$ECHOTRACE_SINK / \$DEBUG_SINK, like "set -x" would do (but without the
+execution).
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
@@ -47,7 +46,7 @@ HELPTEXT
 printer()
 {
     PRETTYPRINTQUOTEDARGS_IFS="$ECHOTRACE_IFS" \
-	PRETTYPRINTQUOTEDARGS_PREFIX="$tracePrefix" \
+    PRETTYPRINTQUOTEDARGS_PREFIX="$nestingPrefix" \
 	exec prettyPrintQuotedArgs -- "$@" >&3
 }
 executor()
@@ -56,7 +55,7 @@ executor()
     $EXEC "$@"
 }
 
-debuggee=
+debuggee="$DEBUG_DEBUGGEE"
 module=
 while [ $# -ne 0 ]
 do
@@ -73,7 +72,7 @@ do
 			    }
 			    printer()
 			    {
-				joinBy >&3 --prefix "${tracePrefix}" -- "$ECHOTRACE_IFS" "$@"
+				joinBy >&3 --prefix "${nestingPrefix}" -- "$ECHOTRACE_IFS" "$@"
 			    }
 			fi
 			;;
@@ -93,20 +92,14 @@ if [ -n "$debuggee" ]; then
     esac
 fi
 
-case "$ECHOTRACE_TRACEFILE" in
+sink="${ECHOTRACE_SINK:-$DEBUG_SINK}"
+case "$sink" in
     '')		exec 3>&2;;
-    \&[0-9])	eval "exec 3>$ECHOTRACE_TRACEFILE";;
-    ?*)		exec 3>>"$ECHOTRACE_TRACEFILE";;
+    \&[0-9])	eval "exec 3>$sink";;
+    ?*)		exec 3>>"$sink";;
 esac
 
-# Duplicated to ../../verbose/bin/verbose
-nestingPrefix=
-if [ $SHLVL -gt 3 ]; then
-    nesting="${PS4:0:1}"
-    printf -v nestingPrefix "%$((SHLVL - 3))s" "$nesting"; printf -v nestingPrefix %s "${nestingPrefix// /$nesting}"
-fi
-tracePrefix="${nestingPrefix}${PS4:-\$ }"
-
-ECHOTRACE_IFS="${ECHOTRACE_IFS//$'\n'/$'\n'${tracePrefix}}"
+nestingPrefix="$(debugNestingPrefix)"
+ECHOTRACE_IFS="${ECHOTRACE_IFS//$'\n'/$'\n'${nestingPrefix}}"
 
 printer "$@"

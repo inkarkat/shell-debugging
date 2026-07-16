@@ -11,9 +11,9 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-p|--paginate|-i|--inbox] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] | -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
-    echo
-    printf 'Usage: %q %s\n' "$(basename "$1")" "--recall [-p|--paginate|-i|--inbox] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
 printUsage()
 {
@@ -37,9 +37,23 @@ HELPDESCRIPTION
     printShortUsage "$1"
     echo
     cat <<HELPTEXT
-    --paginate|-p	Show the debugging diagnostics (and all other stderr
-			output) separately after the execution.
+    --stdout|-1		Include standard output in the debugging diagnostics.
+    --stderr|-2		Include standard error in the debugging diagnostics.
+    --append|-a		Append the debugging diagnostics to the existing log
+			file instead of overwriting it.
+    --no-pager|-P	Don't open the debugging diagnostics in the pager after
+			the execution.
+    --to FILE		Write the debugging diagnostics into FILE instead of the
+			default COMMAND.log (using the first passed COMMAND).
     --inbox|-i		Write the debugging diagnostics into the inbox.
+    --to-separate-files|-s
+			Let each COMMAND write its debugging diagnostics into a
+			separate log file (COMMAND.log) instead of collecting
+			everything into a single log file (named after the first
+			passed COMMAND) / the inbox.
+    --to-tty|-t		Write the debugging diagnostics to the terminal instead.
+    --interactive|-I	Source the COMMAND in an interactive shell. Only works
+			if COMMAND starts with "." or "source".
     --verbose|-v	Print the full command line (with all debugging
 			configuration) before executing it, in a format suitable
 			for copy-and-pasting it into the shell.
@@ -85,6 +99,7 @@ addDebug()
 	add "${commandName}${module:+:}${module}"
     done
 }
+programName=
 addDebugCommand()
 {
     local cmd="${1:?}"; shift
@@ -93,6 +108,11 @@ addDebugCommand()
 	printf >&2 'ERROR: Could not determine command name for %s\n' "$cmd"
 	return 1
     fi
+
+    if [[ "$cmd" =~ ^(\.|source)[[:space:]]+ ]]; then
+	: ${programName:=$commandName}
+    fi
+
     addDebug "$commandName"
 }
 
@@ -124,18 +144,33 @@ handleRecall()
 	exit 1
     fi
 
+    local overrideToStdout=
+    local overrideToStderr=
+    local overrideAppend=
+    local overrideInteractive=
     local overrideVerbose=
     local overridePaginate=
     local overrideInbox=
+    local overrideSeparateFiles=
+    local overrideToTTY=
+    local overrideTo=
     typeset -A overrideFor=()
     typeset -A overrideModules=()
     typeset -A overrideOnlyModules=()
     while [ $# -ne 0 ]
     do
 	case "$1" in
+	    --stdout|-1)	shift; overrideStdout=t;;
+	    --stderr|-2)	shift; overrideStderr=t;;
+	    --append|-a)	shift; overrideAppend=t;;
+	    --interactive|-I)	shift; overrideInteractive=t;;
 	    --verbose|-v)	shift; overrideVerbose=t;;
-	    --paginate|-p)	shift; overridePaginate=t;;
+	    --no-pager|-P)	shift; overridePaginate=t;;
 	    --inbox|-i)		shift; overrideInbox=t;;
+	    --to-separate-files|-s)
+				shift; overrideSeparateFiles=t;;
+	    --to-tty|-t)	shift; overrideToTTY=t;;
+	    --to)		shift; overrideTo="$1"; shift;;
 	    --for)		shift; overrideFor["$1"]=t; shift;;
 	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
 	    --only-module|-M)	shift; overrideOnlyModules["$1"]=t; shift;;
@@ -152,9 +187,17 @@ handleRecall()
     while [ $# -ne 0 ]
     do
 	case "$1" in
+	    --stdout|-1)	[ "$overrideStdout" ] && overrideStdout= || allargs+=("$1"); shift;;
+	    --stderr|-2)	[ "$overrideStderr" ] && overrideStderr= || allargs+=("$1"); shift;;
+	    --append|-a)	[ "$overrideAppend" ] && overrideAppend= || allargs+=("$1"); shift;;
+	    --interactive|-I)	[ "$overrideInteractive" ] && overrideInteractive= || allargs+=("$1"); shift;;
 	    --verbose|-v)	[ "$overrideVerbose" ] && overrideVerbose= || allargs+=("$1"); shift;;
-	    --paginate|-p)	[ "$overridePaginate" ] && overridePaginate= || allargs+=("$1"); shift;;
+	    --no-pager|-P)	[ "$overridePaginate" ] && overridePaginate= || allargs+=("$1"); shift;;
 	    --inbox|-i)		[ "$overrideInbox" ] && overrideInbox= || allargs+=("$1"); shift;;
+	    --to-separate-files|-s)
+				[ "$overrideSeparateFiles" ] && overrideSeparateFiles= || allargs+=("$1"); shift;;
+	    --to-tty|-t)	[ "$overrideToTTY" ] && overrideToTTY= || allargs+=("$1"); shift;;
+	    --to)		[ -n "$overrideTo" ] && overrideTo= || allargs+=("$1" "$2"); shift; shift;;
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["$2"]}" ] && unset "overrideModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --only-module|-M)   [ "${overrideOnlyModules["$2"]}" ] && unset "overrideOnlyModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
@@ -166,9 +209,16 @@ handleRecall()
     # Add those arguments given to the recall that were not used to remove any
     # recalled arguments.
     typeset -a newArgs=()
+    [ "$overrideStdout" ] && newArgs+=(--stdout)
+    [ "$overrideStderr" ] && newArgs+=(--stderr)
+    [ "$overrideAppend" ] && newArgs+=(--append)
+    [ "$overrideInteractive" ] && newArgs+=(--interactive)
     [ "$overrideVerbose" ] && newArgs+=(--verbose)
-    [ "$overridePaginate" ] && newArgs+=(--paginate)
+    [ "$overridePaginate" ] && newArgs+=(--no-pager)
     [ "$overrideInbox" ] && newArgs+=(--inbox)
+    [ "$overrideSeparateFiles" ] && newArgs+=(--to-separate-files)
+    [ "$overrideToTTY" ] && newArgs+=(--to-tty)
+    [ -n "$overrideTo" ] && newArgs+=(--to "$overrideTo")
     local arg
     for arg in "${!overrideFor[@]}"
     do
@@ -189,24 +239,39 @@ handleRecall()
 
 saveToInbox()
 {
-    inbox --base "${commandNames[0]:?}" -- "$@"
+    inbox --base "${programName:-${commandNames[0]:?}}"
 }
 
 typeset -a allargs=("$@")
+isIncludeStdout=
+isIncludeStderr=
+isAppend=
+isInteractive=
 isVerbose=
 commands=
 let commandCnt=0
-typeset -a viewer=()
+unset sink
+pagerCommand="${PAGER:-less}"
+[ "$pagerCommand" = smartless ] && pagerCommand=less	# smartless does not page small outputs that fit the terminal, but we explicitly want to page through the captured debug diagnostics.
+typeset -a captureCommand=()
+typeset -a pager=("$pagerCommand" --RAW-CONTROL-CHARS --)
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--recall)	shift; handleRecall "$@"; set -- "${allargs[@]}";;
-	--paginate|-p)	shift
-			[ "$PAGER" = smartless ] && PAGER=less	# smartless does not page small outputs that fit the terminal, but we explicitly want to page through the captured debug diagnostics.
-			viewer=("${PAGER:-less}" --RAW-CONTROL-CHARS --)
-			;;
-	--inbox|-i)	shift; viewer=(saveToInbox);;
+
+	--stdout|-1)	shift; isIncludeStdout=t;;
+	--stderr|-2)	shift; isIncludeStderr=t;;
+	--append|-a)	shift; isAppend=t;;
+	--no-pager|-P)	shift; pager=();;
+	--to)		shift; sink="${1:?}"; shift;;
+	--inbox|-i)	shift; captureCommand=(saveToInbox); pager=();;
+	--to-separate-files|-s)
+			shift; sink='';;
+	--to-tty|-t)	shift; sink='/dev/tty';;
+	--interactive|-I)
+			shift; isInteractive=t;;
 	--verbose|-v)	shift; isVerbose=t;;
 	--for)		shift
 			addDebug "${1:?}"; shift
@@ -261,9 +326,19 @@ if [ $# -ne 0 ]; then
     quotedSimpleCommand="${quotedSimpleCommand% }"
     addDebugCommand "$quotedSimpleCommand" || exit 2
     addCommand "$quotedSimpleCommand"
+    if [ "${#commandNames[@]}" -gt 1 ]; then
+	# Use the trailing SIMPLECOMMAND as the command name for the log file, not the
+	# first --command|--exec COMMAND.
+	commandNames=("${commandNames[-1]}" "${commandNames[@]:0:${#commandNames[@]}-1}")
+    fi
     let commandCnt+=1
 fi
-if [ -z "$commands" ]; then
+if [ -n "${sink+t}" -a ${#captureCommand[@]} -gt 0 ]; then
+    echo 'ERROR: Cannot combine --to FILE or -s|--to-separate-files or -t|--to-tty with -i|--inbox.'
+    echo
+    printUsage "$0"
+    exit 2
+elif [ -z "$commands" ]; then
     echo "ERROR: No COMMAND(s) specified; need to pass -c|--command \"COMMANDLINE\", or --exec SIMPLECOMMAND [...] $WITHDEBUG_EXEC_END or SIMPLECOMMAND."
     echo
     printUsage "$0"
@@ -283,5 +358,70 @@ fi
 
 export DEBUG
 
-eval "${viewer:+{ }${commands}${viewer:+;\} 3>&1 1>&2 2>&3 3>&- }" \
-    "${viewer:+|}" '"${viewer[@]}"' "${viewer:+ 3>&1 1>&2 2>&3 3>&-}"
+if [ -n "$programName" ]; then
+    shift   # .|source
+    shift   # $programName
+    export DEBUG_DEBUGGEE="$programName"
+    BASH_ARGV0="$programName"	# Bash 5+ only
+
+    if [ "$isInteractive" ]; then
+	printf -v commands 'bash -i -c %q' "$commands"
+    fi
+    : ${sink="${programName}.log"}
+else
+    : ${sink="${commandNames[0]:?}.log"}
+fi
+
+if [ ${#captureCommand[@]} -gt 0 ]; then
+    for ((i = 0; i < 5; i++))
+    do
+	TMPFIFO="$(mktemp --dry-run --tmpdir="${XDG_RUNTIME_DIR:-/tmp}" "$(basename -- "$0")-XXXXXX" 2>/dev/null || echo "${XDG_RUNTIME_DIR:-/tmp}/$(basename -- "$0").$$$RANDOM")"
+	mkfifo -m 600 "$TMPFIFO" 2>/dev/null && break	# mkfifo fails when the file already exists; this handles the race condition.
+    done
+
+    { "${captureCommand[@]}" < "$TMPFIFO"; } &	# Start the reader first.
+    capturePID=$!
+    exec 3>"$TMPFIFO"	# Open the pipe for writing; this will block until the reader is ready.
+    rm -- "$TMPFIFO" # Unlink the named pipe.
+
+    sink='&3'
+    export DEBUG_SINK="$sink"
+    export BASH_XTRACEFD=3    # Capture "set -x" output by the log sink command, too.
+    closeFifo()
+    {
+	exec 3>&- # Close the pipe.
+	wait $capturePID
+    }
+    trap closeFifo EXIT
+elif [ -n "${sink+t}" -a -z "$sink" ]; then
+    if [ "$isIncludeStdout" ] || [ "$isIncludeStderr" ]; then
+	echo 'ERROR: Cannot combine -1|--stdout or -2|--stderr with -s|--to-separate-files.'
+	echo
+	printUsage "$0"
+	exit 2
+    fi
+    # Let each command write to its own log file; do not create a single log file.
+else
+    [ "$isAppend" ] || : > "$sink"
+    exec 3>>"${sink:?}"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
+    export DEBUG_SINK="$sink"
+
+    if [ ${#pager[@]} -gt 0 ]; then
+	openPager()
+	{
+	    [ "$isIncludeStdout" ] && exec 1>&4
+	    [ "$isIncludeStderr" ] && exec 2>&5
+	    "${pager[@]}" "$sink"
+	}
+	trap openPager EXIT
+    fi
+fi
+
+if [ "$isIncludeStdout" ]; then
+    exec 4>&1 1>&3
+fi
+if [ "$isIncludeStderr" ]; then
+    exec 5>&1 2>&3
+fi
+
+eval "$commands"
