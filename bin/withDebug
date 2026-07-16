@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -51,6 +51,7 @@ HELPDESCRIPTION
 			separate log file (COMMAND.log) instead of collecting
 			everything into a single log file (named after the first
 			passed COMMAND) / the inbox.
+    --to-tty|-t		Write the debugging diagnostics to the terminal instead.
     --interactive|-I	Source the COMMAND in an interactive shell. Only works
 			if COMMAND starts with "." or "source".
     --verbose|-v	Print the full command line (with all debugging
@@ -151,6 +152,7 @@ handleRecall()
     local overridePaginate=
     local overrideInbox=
     local overrideSeparateFiles=
+    local overrideToTTY=
     local overrideTo=
     typeset -A overrideFor=()
     typeset -A overrideModules=()
@@ -167,6 +169,7 @@ handleRecall()
 	    --inbox|-i)		shift; overrideInbox=t;;
 	    --to-separate-files|-s)
 				shift; overrideSeparateFiles=t;;
+	    --to-tty|-t)	shift; overrideToTTY=t;;
 	    --to)		shift; overrideTo="$1"; shift;;
 	    --for)		shift; overrideFor["$1"]=t; shift;;
 	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
@@ -193,6 +196,7 @@ handleRecall()
 	    --inbox|-i)		[ "$overrideInbox" ] && overrideInbox= || allargs+=("$1"); shift;;
 	    --to-separate-files|-s)
 				[ "$overrideSeparateFiles" ] && overrideSeparateFiles= || allargs+=("$1"); shift;;
+	    --to-tty|-t)	[ "$overrideToTTY" ] && overrideToTTY= || allargs+=("$1"); shift;;
 	    --to)		[ -n "$overrideTo" ] && overrideTo= || allargs+=("$1" "$2"); shift; shift;;
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["$2"]}" ] && unset "overrideModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
@@ -213,6 +217,7 @@ handleRecall()
     [ "$overridePaginate" ] && newArgs+=(--no-pager)
     [ "$overrideInbox" ] && newArgs+=(--inbox)
     [ "$overrideSeparateFiles" ] && newArgs+=(--to-separate-files)
+    [ "$overrideToTTY" ] && newArgs+=(--to-tty)
     [ -n "$overrideTo" ] && newArgs+=(--to "$overrideTo")
     local arg
     for arg in "${!overrideFor[@]}"
@@ -264,6 +269,7 @@ do
 	--inbox|-i)	shift; captureCommand=(saveToInbox); pager=();;
 	--to-separate-files|-s)
 			shift; sink='';;
+	--to-tty|-t)	shift; sink='/dev/tty';;
 	--interactive|-I)
 			shift; isInteractive=t;;
 	--verbose|-v)	shift; isVerbose=t;;
@@ -328,7 +334,7 @@ if [ $# -ne 0 ]; then
     let commandCnt+=1
 fi
 if [ -n "${sink+t}" -a ${#captureCommand[@]} -gt 0 ]; then
-    echo 'ERROR: Cannot combine --to FILE or -s|--to-separate-files with -i|--inbox.'
+    echo 'ERROR: Cannot combine --to FILE or -s|--to-separate-files or -t|--to-tty with -i|--inbox.'
     echo
     printUsage "$0"
     exit 2
