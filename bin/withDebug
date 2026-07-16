@@ -216,10 +216,11 @@ isInteractive=
 isVerbose=
 commands=
 let commandCnt=0
-debugPager="${PAGER:-less}"
-[ "$debugPager" = smartless ] && debugPager=less	# smartless does not page small outputs that fit the terminal, but we explicitly want to page through the captured debug diagnostics.
+sink=
+pagerCommand="${PAGER:-less}"
+[ "$pagerCommand" = smartless ] && pagerCommand=less	# smartless does not page small outputs that fit the terminal, but we explicitly want to page through the captured debug diagnostics.
 typeset -a captureCommand=()
-typeset -a viewer=("$debugPager" --RAW-CONTROL-CHARS --)
+typeset -a pager=("$pagerCommand" --RAW-CONTROL-CHARS --)
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -227,8 +228,8 @@ do
 	--recall)	shift; handleRecall "$@"; set -- "${allargs[@]}";;
 
 	--append|-a)	shift; isAppend=t;;
-	--no-pager|-P)	shift; viewer=();;
-	--inbox|-i)	shift; captureCommand=(saveToInbox); debugPager=();;
+	--no-pager|-P)	shift; pager=();;
+	--inbox|-i)	shift; captureCommand=(saveToInbox); pager=();;
 	--interactive|-I)
 			shift; isInteractive=t;;
 	--verbose|-v)	shift; isVerbose=t;;
@@ -346,8 +347,8 @@ else
     [ "$isAppend" ] || : > "$sink"
     exec 3>>"$sink"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
 
-    if [ ${#debugPager[@]} -gt 0 ]; then
-	openPager() { "${debugPager[@]}" "$sink"; }
+    if [ ${#pager[@]} -gt 0 ]; then
+	openPager() { "${pager[@]}" "$sink"; }
 	trap openPager EXIT
     fi
 fi
