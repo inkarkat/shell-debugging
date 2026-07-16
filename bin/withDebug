@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -37,6 +37,8 @@ HELPDESCRIPTION
     printShortUsage "$1"
     echo
     cat <<HELPTEXT
+    --stdout|-1		Include standard output in the debugging diagnostics.
+    --stderr|-2		Include standard error in the debugging diagnostics.
     --append|-a		Append the debugging diagnostics to the existing log
 			file instead of overwriting it.
     --no-pager|-P	Don't open the debugging diagnostics in the pager after
@@ -141,6 +143,8 @@ handleRecall()
 	exit 1
     fi
 
+    local overrideToStdout=
+    local overrideToStderr=
     local overrideAppend=
     local overrideInteractive=
     local overrideVerbose=
@@ -154,6 +158,8 @@ handleRecall()
     while [ $# -ne 0 ]
     do
 	case "$1" in
+	    --stdout|-1)	shift; overrideStdout=t;;
+	    --stderr|-2)	shift; overrideStderr=t;;
 	    --append|-a)	shift; overrideAppend=t;;
 	    --interactive|-I)	shift; overrideInteractive=t;;
 	    --verbose|-v)	shift; overrideVerbose=t;;
@@ -178,6 +184,8 @@ handleRecall()
     while [ $# -ne 0 ]
     do
 	case "$1" in
+	    --stdout|-1)	[ "$overrideStdout" ] && overrideStdout= || allargs+=("$1"); shift;;
+	    --stderr|-2)	[ "$overrideStderr" ] && overrideStderr= || allargs+=("$1"); shift;;
 	    --append|-a)	[ "$overrideAppend" ] && overrideAppend= || allargs+=("$1"); shift;;
 	    --interactive|-I)	[ "$overrideInteractive" ] && overrideInteractive= || allargs+=("$1"); shift;;
 	    --verbose|-v)	[ "$overrideVerbose" ] && overrideVerbose= || allargs+=("$1"); shift;;
@@ -197,6 +205,8 @@ handleRecall()
     # Add those arguments given to the recall that were not used to remove any
     # recalled arguments.
     typeset -a newArgs=()
+    [ "$overrideStdout" ] && newArgs+=(--stdout)
+    [ "$overrideStderr" ] && newArgs+=(--stderr)
     [ "$overrideAppend" ] && newArgs+=(--append)
     [ "$overrideInteractive" ] && newArgs+=(--interactive)
     [ "$overrideVerbose" ] && newArgs+=(--verbose)
@@ -228,6 +238,8 @@ saveToInbox()
 }
 
 typeset -a allargs=("$@")
+isIncludeStdout=
+isIncludeStderr=
 isAppend=
 isInteractive=
 isVerbose=
@@ -244,6 +256,8 @@ do
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--recall)	shift; handleRecall "$@"; set -- "${allargs[@]}";;
 
+	--stdout|-1)	shift; isIncludeStdout=t;;
+	--stderr|-2)	shift; isIncludeStderr=t;;
 	--append|-a)	shift; isAppend=t;;
 	--no-pager|-P)	shift; pager=();;
 	--to)		shift; sink="${1:?}"; shift;;
@@ -374,16 +388,34 @@ if [ ${#captureCommand[@]} -gt 0 ]; then
     }
     trap closeFifo EXIT
 elif [ -n "${sink+t}" -a -z "$sink" ]; then
-    :	# Let each command write to its own log file; do not create a single log file.
+    if [ "$isIncludeStdout" ] || [ "$isIncludeStderr" ]; then
+	echo 'ERROR: Cannot combine -1|--stdout or -2|--stderr with -s|--to-separate-files.'
+	echo
+	printUsage "$0"
+	exit 2
+    fi
+    # Let each command write to its own log file; do not create a single log file.
 else
     [ "$isAppend" ] || : > "$sink"
     exec 3>>"${sink:?}"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
     export DEBUG_SINK="$sink"
 
     if [ ${#pager[@]} -gt 0 ]; then
-	openPager() { "${pager[@]}" "$sink"; }
+	openPager()
+	{
+	    [ "$isIncludeStdout" ] && exec 1>&4
+	    [ "$isIncludeStderr" ] && exec 2>&5
+	    "${pager[@]}" "$sink"
+	}
 	trap openPager EXIT
     fi
+fi
+
+if [ "$isIncludeStdout" ]; then
+    exec 4>&1 1>&3
+fi
+if [ "$isIncludeStderr" ]; then
+    exec 5>&1 2>&3
 fi
 
 eval "$commands"
