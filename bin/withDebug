@@ -321,6 +321,7 @@ else
 fi
 
 [ "$isAppend" ] || : > "$DEBUG_SINK"
+exec 3>>"$DEBUG_SINK"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
 
 openPager()
 {
