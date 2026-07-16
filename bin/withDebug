@@ -306,6 +306,11 @@ if [ $# -ne 0 ]; then
     quotedSimpleCommand="${quotedSimpleCommand% }"
     addDebugCommand "$quotedSimpleCommand" || exit 2
     addCommand "$quotedSimpleCommand"
+    if [ "${#commandNames[@]}" -gt 1 ]; then
+	# Use the trailing SIMPLECOMMAND as the command name for the log file, not the
+	# first --command|--exec COMMAND.
+	commandNames=("${commandNames[-1]}" "${commandNames[@]:0:${#commandNames[@]}-1}")
+    fi
     let commandCnt+=1
 fi
 if [ -n "${sink+t}" -a ${#captureCommand[@]} -gt 0 ]; then
