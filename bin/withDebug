@@ -207,7 +207,7 @@ handleRecall()
 
 saveToInbox()
 {
-    inbox --base "${commandNames[0]:?}" -- "$@"
+    inbox --base "${programName:-${commandNames[0]:?}}"
 }
 
 typeset -a allargs=("$@")
@@ -218,6 +218,7 @@ commands=
 let commandCnt=0
 debugPager="${PAGER:-less}"
 [ "$debugPager" = smartless ] && debugPager=less	# smartless does not page small outputs that fit the terminal, but we explicitly want to page through the captured debug diagnostics.
+typeset -a captureCommand=()
 typeset -a viewer=("$debugPager" --RAW-CONTROL-CHARS --)
 while [ $# -ne 0 ]
 do
@@ -227,7 +228,7 @@ do
 
 	--append|-a)	shift; isAppend=t;;
 	--no-pager|-P)	shift; viewer=();;
-	--inbox|-i)	shift; viewer=(saveToInbox);;
+	--inbox|-i)	shift; captureCommand=(saveToInbox); debugPager=();;
 	--interactive|-I)
 			shift; isInteractive=t;;
 	--verbose|-v)	shift; isVerbose=t;;
@@ -306,6 +307,7 @@ fi
 
 export DEBUG
 
+sink=
 if [ -n "$programName" ]; then
     shift   # .|source
     shift   # $programName
@@ -315,18 +317,40 @@ if [ -n "$programName" ]; then
     if [ "$isInteractive" ]; then
 	printf -v commands 'bash -i -c %q' "$commands"
     fi
-    export DEBUG_SINK="${programName}.log"
+    sink="${programName}.log"
 else
-    export DEBUG_SINK="${commandNames[0]:?}.log"
+    sink="${commandNames[0]:?}.log"
 fi
 
-[ "$isAppend" ] || : > "$DEBUG_SINK"
-exec 3>>"$DEBUG_SINK"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
+if [ ${#captureCommand[@]} -gt 0 ]; then
+    for ((i = 0; i < 5; i++))
+    do
+	TMPFIFO="$(mktemp --dry-run --tmpdir="${XDG_RUNTIME_DIR:-/tmp}" "$(basename -- "$0")-XXXXXX" 2>/dev/null || echo "${XDG_RUNTIME_DIR:-/tmp}/$(basename -- "$0").$$$RANDOM")"
+	mkfifo -m 600 "$TMPFIFO" 2>/dev/null && break	# mkfifo fails when the file already exists; this handles the race condition.
+    done
 
-openPager()
-{
-    "${debugPager[@]}" "$DEBUG_SINK"
-}
-[ ${#debugPager[@]} -eq 0 ] || trap openPager EXIT
+    { "${captureCommand[@]}" < "$TMPFIFO"; } &	# Start the reader first.
+    capturePID=$!
+    exec 3>"$TMPFIFO"	# Open the pipe for writing; this will block until the reader is ready.
+    rm -- "$TMPFIFO" # Unlink the named pipe.
+
+    sink='&3'
+    export BASH_XTRACEFD=3    # Capture "set -x" output by the log sink command, too.
+    closeFifo()
+    {
+	exec 3>&- # Close the pipe.
+	wait $capturePID
+    }
+    trap closeFifo EXIT
+else
+    [ "$isAppend" ] || : > "$sink"
+    exec 3>>"$sink"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
+
+    if [ ${#debugPager[@]} -gt 0 ]; then
+	openPager() { "${debugPager[@]}" "$sink"; }
+	trap openPager EXIT
+    fi
+fi
+export DEBUG_SINK="$sink"
 
 eval "$commands"
