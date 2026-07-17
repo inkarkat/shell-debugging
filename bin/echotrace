@@ -4,6 +4,8 @@ shopt -qs extglob
 : ${ECHOTRACE_IFS=' '}
 [ "$ECHOTRACE_IFS" = newline ] && ECHOTRACE_IFS=$' \\\n  '
 
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
+
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
@@ -22,22 +24,23 @@ printLongUsage()
     # This is the long "man page" when launched with the help argument.
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
-Write arguments (separated by a space or \$ECHOTRACE_IFS) as an execution trace
-(i.e. with \$PS4 prepended and indicating the nesting level) to standard error /
-\$ECHOTRACE_SINK / \$DEBUG_SINK, like "set -x" would do (but without the
-execution).
+When \$DEBUG refers to the DEBUGGEE, write the COMMAND and its arguments
+(separated by a space or \$ECHOTRACE_IFS) as an execution trace (i.e. with \$PS4
+prepended and indicating the nesting level) to standard error / \$ECHOTRACE_SINK
+/ \$DEBUG_SINK without actually executing COMMAND. (Basically "set -x" but
+without the execution.) Else, the COMMAND is just executed as if echotrace
+weren't prepended.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
     echo
     cat <<HELPTEXT
-    --for DEBUGGEE	Only print the execution trace when \$DEBUG contains
-			DEBUGGEE. Else, the COMMAND is just executed as if
-			echotrace weren't prepended.
-    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
-			enabled.
     --eval		Print the evaluation result instead of the (quoted)
 			eval.
+    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
+			parent process.
+    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
+			enabled.
 SEE ALSO:
 - inboxtrace duplicates to the inbox location instead of standard error.
 HELPTEXT
@@ -83,14 +86,19 @@ do
 done
 [ $# -eq 0 ] && exit
 
-if [ -n "$debuggee" ]; then
-    case ",${DEBUG}," in
-	*,${debuggee}${module:+:}${module},*)	;;
-	*)  executor "$@"
-	    exit $?
-	    ;;
-    esac
+if [ -z "$debuggee" ]; then
+    {
+	IFS= read -r -d '' debugCmd
+	IFS= read -r -d '' debugSecond
+    } < /proc/${ECHOTRACE_PPID:-$PPID}/cmdline
+    debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
 fi
+case ",${DEBUG}," in
+    *,${debuggee}${module:+:}${module},*)	;;
+    *)  executor "$@"
+	exit $?
+	;;
+esac
 
 sink="${ECHOTRACE_SINK:-$DEBUG_SINK}"
 case "$sink" in
