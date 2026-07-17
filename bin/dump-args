@@ -2,18 +2,44 @@
 shopt -qs extglob
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
-readonly generalArgs='[-a|--array NAME] [-v|--verbose] [--D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]]'
+readonly generalArgs='[-a|--array NAME] [-v|--verbose]'
+readonly debugArgs='--D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]'
 getShortUsage()
 {
-    printf %s "$generalArgs"
+    local usageSep
+    [ $# -gt 0 ] || set -- ''
+    while [ $# -gt 0 ]
+    do
+	case "$1" in
+	    '') printf %s "$usageSep" "$generalArgs [${debugArgs}]";;
+	    general)
+		printf %s "$usageSep" "$generalArgs";;
+	    debug)
+		printf %s "$usageSep" "$debugArgs";;
+	    *)  echo "ERROR: Unknown short usage topic \"$1\"!" >&2; return 2;;
+	esac
+	shift; usageSep=' '
+    done
 }
 getLongUsage()
 {
-    cat <<HELPTEXT
+    [ $# -gt 0 ] || set -- ''
+    while [ $# -gt 0 ]
+    do
+	local topic="$1"; shift
+	local hadTopic=
+	case "$topic" in
+	    ''|general)
+		cat <<HELPTEXT
     --array|-a NAME	ARG(s) originate from an array named NAME and are
 			printed as such (with 0-based index).
     --verbose|-v	Print each argument on a separate line and prepend the
 			index.
+HELPTEXT
+		hadTopic=t
+		;;&
+	    ''|debug)
+		cat <<HELPTEXT
     --on-debug|-D	Log ARG(s) to a debug file (DEBUGGEE.log) only when
 			\$DEBUG refers to the DEBUGGEE, and print the debug
 			filespec to the terminal.
@@ -27,13 +53,19 @@ $ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will ena
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
 HELPTEXT
+		hadTopic=t
+		;;&
+	    *)  [ "$hadTopic" ] || { echo "ERROR: Unknown long usage topic \"$topic\"!" >&2; return 2; };;
+	esac
+    done
 }
 
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [[DUMPARGS|DEBUG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$generalArgs [--] [ARG ...] [-?|-h|--help]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" "$generalArgs [--] [ARG ...] [-?|-h|--help]"
+    printf 'Usage: [[DUMPARGS|DEBUG]_SINK=FILESPEC|&N] ${DEBUG:+%q %s}\n' "$(basename "$1")" "$generalArgs $debugArgs [--] [ARG ...]"
 }
 printUsage()
 {
@@ -53,7 +85,7 @@ HELPDESCRIPTION
     echo
     printShortUsage "$1"
     echo
-    getLongUsage
+    getLongUsage ''
     cat <<HELPTEXT
 SEE ALSO:
 - dump-args-exec also executes COMMAND in addition to printing them.

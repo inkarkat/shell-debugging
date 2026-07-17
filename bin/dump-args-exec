@@ -4,7 +4,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [[DUMPARGS|DEBUG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$(dump-args --get-short-usage 2>/dev/null) [--] COMMAND [ARG ...] [-?|-h|--help]"
+    printf 'Usage: [[DUMPARGS|DEBUG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$(dump-args --get-short-usage general 2>/dev/null) [--] COMMAND [ARG ...] [-?|-h|--help]"
+    printf 'Usage: [[DUMPARGS|DEBUG]_SINK=FILESPEC|&N] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" "$(dump-args --get-short-usage general 2>/dev/null) $(dump-args --get-short-usage debug 2>/dev/null) [--]" 'COMMAND [ARG ...]'
 }
 printUsage()
 {
@@ -24,7 +25,7 @@ HELPDESCRIPTION
     echo
     printShortUsage "$1"
     echo
-    dump-args --get-long-usage 2>/dev/null
+    dump-args --get-long-usage '' 2>/dev/null
     cat <<HELPTEXT
 SEE ALSO:
 - verbose also executes and writes as an execution trace. Prefer that unless you
