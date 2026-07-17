@@ -254,7 +254,10 @@ if [ "$isActive" ]; then
 fi
 
 $launcher "$@"; status=$?
-if [ "$isOnDebug" ] && [ -n "$sink" ]; then
+if [ "$isOnDebug" ] \
+    && [ "$isActive" ] \
+    && [ -n "$sink" ]
+then
     printfToTerm "%s%s invocation logged to %q\\n" "$nestingPrefix" "$scriptName" "$sink"
 fi
 exit $status
