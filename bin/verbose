@@ -10,7 +10,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [VERBOSE_IFS=STRING|newline] [[VERBOSE|DEBUG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [-?|-h|--help] ...'
+    printf 'Usage: [VERBOSE_IFS=STRING|newline] [[VERBOSE|DEBUG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [-0|--stdin] [-1|--stdout] [-2|--stderr] [-?|-h|--help] ...'
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '... [--] COMMAND [ARG ...]'
     echo
@@ -38,6 +38,16 @@ HELPDESCRIPTION
     cat <<HELPTEXT
     --eval		Print the evaluation result instead of the (quoted)
 			eval.
+    --stdin|-0		Print standard input (prefixed by 0: if more than one
+			input-output option is active).
+    --stdout|-1		Print standard output (prefixed by 1: if more than one
+			input-output option is active). Without debugging, this
+			only makes sense in combination with -2|--stderr, to see
+			what output came from where.
+    --stderr|-2		Print standard error output (prefixed by 2: if more than
+			one input-output option is active). Without debugging,
+			this only makes sense in combination with -1|--stdout,
+			to see what output came from where.
     --on-debug|-D	Log the execution trace to a debug file (DEBUGGEE.log)
 			only when \$DEBUG refers to the DEBUGGEE, and print the
 			debug filespec to the terminal.
@@ -57,6 +67,8 @@ SEE ALSO:
   can prepend an argument count or use array syntax, but is more geared toward
   data, not commands.
 - dump-status --verbose additionally prints the exit status of the COMMAND.
+- debugtee can be injected into a pipeline to log what's passing through, so
+  it's like verbose --stdin or --stdout, but not associated with a command.
 
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
@@ -76,6 +88,7 @@ executor()
 }
 
 EXEC=exec
+typeset -a logFileDescriptors=()
 isActive=t
 isOnDebug=
 debuggee="$DEBUG_DEBUGGEE"
@@ -84,6 +97,9 @@ while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--stdin|-0)	shift; logFileDescriptors[0]+=t;;
+	--stdout|-1)	shift; logFileDescriptors[1]+=t;;
+	--stderr|-2)	shift; logFileDescriptors[2]+=t;;
 	--on-debug|-D)	shift; isOnDebug=t; isActive=;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
@@ -111,6 +127,86 @@ if [ $# -eq 0 ]; then
     printUsage "$0" >&2
     exit 2
 fi
+
+stdinPrefix='0: '
+stdoutPrefix='1: '
+stderrPrefix='2: '
+logFileDescriptorCount="${logFileDescriptors[*]}"; logFileDescriptorCount="${logFileDescriptorCount// /}"
+case ${#logFileDescriptorCount} in
+    0)	launcher=executor;;
+    1)	stdinPrefix=''; stdoutPrefix=''; stderrPrefix='';&
+    *)	printf -v launcher '%d' "${!logFileDescriptors[@]}"; launcher="executeAndCapture${launcher}"
+	EXEC=''
+	;;
+esac
+
+logWithPrefix()
+{
+    local prefix="${1?}"; shift
+    local isEOL=t
+    while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
+    do
+	printf '%s%s\n' "$prefix" "$line" >&3
+	printf "%s%s${isEOL:+\\n}" "$line"
+    done \
+}
+
+executeAndCapture0()
+{
+    logWithPrefix "$stdinPrefix" \
+	| executor "$@"
+}
+
+executeAndCapture1()
+{
+    executor "$@" \
+	| logWithPrefix "$stdoutPrefix"
+}
+
+executeAndCapture2()
+{
+    {
+	executor "$@" 4>&1 1>&2 2>&4 4>&- \
+	    | logWithPrefix "$stderrPrefix"
+    } 4>&1 1>&2 2>&4 4>&-
+}
+
+executeAndCapture01()
+{
+    logWithPrefix "$stdinPrefix" \
+	| executor "$@" \
+	| logWithPrefix "$stdoutPrefix"
+}
+
+executeAndCapture02()
+{
+    logWithPrefix "$stdinPrefix" \
+	| \
+	    {
+		executor "$@" 4>&1 1>&2 2>&4 4>&- \
+		    | logWithPrefix "$stderrPrefix"
+	    } 4>&1 1>&2 2>&4 4>&-
+}
+
+executeAndCapture12()
+{
+    {
+	executor "$@" 4>&1 1>&2 2>&4 4>&- \
+	    | logWithPrefix "$stderrPrefix"
+    } 4>&1 1>&2 2>&4 4>&- \
+	| logWithPrefix "$stdoutPrefix"
+}
+
+executeAndCapture012()
+{
+    logWithPrefix "$stdinPrefix" \
+	| \
+	    {
+		executor "$@" 4>&1 1>&2 2>&4 4>&- \
+	|	logWithPrefix "$stderrPrefix"
+	    } 4>&1 1>&2 2>&4 4>&- \
+	| logWithPrefix "$stdoutPrefix"
+}
 
 printfToTerm()
 {
@@ -157,7 +253,7 @@ if [ "$isActive" ]; then
     printer "$@"
 fi
 
-executor "$@"; status=$?
+$launcher "$@"; status=$?
 if [ "$isOnDebug" ] && [ -n "$sink" ]; then
     printfToTerm "%s%s invocation logged to %q\\n" "$nestingPrefix" "$scriptName" "$sink"
 fi
