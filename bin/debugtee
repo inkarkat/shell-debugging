@@ -119,7 +119,12 @@ case ",${DEBUG}," in
 	esac
 
 	sink="${DEBUGTEE_SINK:-$DEBUG_SINK}"
-	trap finally EXIT
+	case "$sink" in
+	    '')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
+	    \&[0-9])	sink="/dev/fd/${sink#\&}";;
+	    ?*)		trap finally EXIT;;
+	esac
+
 	if [ "$isHeader" ]; then
 	    isFirst=; [ ! "$isAppend" ] || [ ! -s "$sink" ] && isFirst=t;
 	    eval 'HEADER_STYLE=dashed-line header ${isFirst:+--first} --no-color -- "${description}${description:+ at }$(timestamp --logging)"' ">${isAppend:+>} \"$sink\""

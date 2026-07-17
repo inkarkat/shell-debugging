@@ -79,11 +79,18 @@ case ",${DEBUG:-}," in
 	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
+	sink="${DEBUGLOG_SINK:-$DEBUG_SINK}"
+	case "$sink" in
+	    '')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
+	    \&[0-9])	eval "exec >$sink";;
+	    ?*)		exec >>"$sink";;
+	esac
+
 	if [ "$isLogF" ]; then
 	    logf --prefix "$debuggee (${module}${module:+, }${PPID}) " "$@"
 	else
 	    log "$debuggee (${module}${module:+, }${PPID})" "$@"
-	fi >> "${DEBUGLOG_SINK:-$DEBUG_SINK}"
+	fi
 	;;
     *,@(debug|${scriptName}),*)
 	{ printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
