@@ -5,7 +5,13 @@
 
 nestingPrefix=
 if [ $SHLVL -gt $DEBUGNESTINGPREFIX_BASE ]; then
-    nesting="${PS4:0:1}"
-    printf -v nestingPrefix "%$((SHLVL - DEBUGNESTINGPREFIX_BASE))s" "$nesting"
-    printf %s%s "${nestingPrefix// /$nesting}" "${PS4:1}"
+    nestingLevel=$((SHLVL - DEBUGNESTINGPREFIX_BASE))
+else
+    # When a client command is directly invoked from an (interactive) terminal,
+    # SHLVL is 2, but we still want to show a single nesting prefix.
+    nestingLevel=1
 fi
+
+nesting="${PS4:0:1}"
+printf -v nestingPrefix "%${nestingLevel}s" "$nesting"
+printf %s%s "${nestingPrefix// /$nesting}" "${PS4:1}"
