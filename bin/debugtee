@@ -52,6 +52,9 @@ HELPDESCRIPTION
 SEE ALSO:
 - dump-files [--on-debug] prints file contents, not pipelined standard input to
   a debug file.
+- verbose --on-debug --stdin|--stdout|--stderr logs what gets into / out of an
+  invoked COMMAND, not with header, not into separate files, but with prefixes
+  to distinguish the streams.
 HELPTEXT
 }
 

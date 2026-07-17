@@ -10,9 +10,11 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [VERBOSE_IFS=STRING|newline] [[VERBOSE|DEBUG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [--] COMMAND [ARG ...] [-?|-h|--help]'
+    printf 'Usage: [VERBOSE_IFS=STRING|newline] [[VERBOSE|DEBUG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [-0|--stdin] [-1|--stdout] [-2|--stderr] [-?|-h|--help] ...'
     echo
-    printf 'Usage: [VERBOSE_IFS=STRING|newline] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[--eval] -D|--on-debug [--for DEBUGGEE] [-m|--module MODULE] [--]' 'COMMAND [ARG ...]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '... [--] COMMAND [ARG ...]'
+    echo
+    printf 'Usage: ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '... -D|--on-debug [--for DEBUGGEE] [-m|--module MODULE] [--io-modules | [--stdin-module MODULE] [--stdout-module MODULE] [--stderr-module MODULE]] [--]' 'COMMAND [ARG ...]'
 }
 printUsage()
 {
@@ -36,6 +38,16 @@ HELPDESCRIPTION
     cat <<HELPTEXT
     --eval		Print the evaluation result instead of the (quoted)
 			eval.
+    --stdin|-0		Print standard input (prefixed by 0: if more than one
+			input-output option is active).
+    --stdout|-1		Print standard output (prefixed by 1: if more than one
+			input-output option is active). Without debugging, this
+			only makes sense in combination with -2|--stderr, to see
+			what output came from where.
+    --stderr|-2		Print standard error output (prefixed by 2: if more than
+			one input-output option is active). Without debugging,
+			this only makes sense in combination with -1|--stdout,
+			to see what output came from where.
     --on-debug|-D	Log the execution trace to a debug file (DEBUGGEE.log)
 			only when \$DEBUG refers to the DEBUGGEE, and print the
 			debug filespec to the terminal.
@@ -50,11 +62,30 @@ $ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will ena
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
+    --io-modules	Activate standard input / output / error logging only if
+			debugging for module "input" / "output" / "errors" of
+			the DEBUGGEE is enabled.
+			Syntactic sugar for --stdin-module input \\
+			    --stdout-module output --stderr-module errors
+    --stdin-module MODULE
+			Log standard input (prefixed by 0: if more than one
+			input-output option is active) only if debugging for
+			MODULE of the DEBUGGEE is enabled.
+    --stdout-module MODULE
+			Log standard output (prefixed by 1: if more than one
+			input-output option is active) only if debugging for
+			MODULE of the DEBUGGEE is enabled.
+    --stderr-module MODULE
+			Log standard error output (prefixed by 2: if more than
+			one input-output option is active) only if debugging for
+			MODULE of the DEBUGGEE is enabled.
 SEE ALSO:
 - dump-args-exec also prints command-line arguments (without nesting level), and
   can prepend an argument count or use array syntax, but is more geared toward
   data, not commands.
 - dump-status --verbose additionally prints the exit status of the COMMAND.
+- debugtee can be injected into a pipeline to log what's passing through, so
+  it's like verbose --stdin or --stdout, but not associated with a command.
 
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
@@ -74,6 +105,13 @@ executor()
 }
 
 EXEC=exec
+typeset -a logFileDescriptors=()
+stdinModule=
+stdinModuleEnabler=
+stdoutModule=
+stdoutModuleEnabler=
+stderrModule=
+stderrModuleEnabler=
 isActive=t
 isOnDebug=
 debuggee="$DEBUG_DEBUGGEE"
@@ -82,9 +120,20 @@ while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--stdin|-0)	shift; logFileDescriptors[0]+=t;;
+	--stdout|-1)	shift; logFileDescriptors[1]+=t;;
+	--stderr|-2)	shift; logFileDescriptors[2]+=t;;
 	--on-debug|-D)	shift; isOnDebug=t; isActive=;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
+	--io-modules)	shift
+			stdinModule='input'; stdinModuleEnabler+=t
+			stdoutModule='output'; stdoutModuleEnabler+=t
+			stderrModule='errors'; stderrModuleEnabler+=t
+			;;
+	--stdin-module)	shift; stdinModule="${1:?}"; shift; stdinModuleEnabler+=t;;
+	--stdout-module) shift; stdoutModule="${1:?}"; shift; stdoutModuleEnabler+=t;;
+	--stderr-module) shift; stderrModule="${1:?}"; shift; stderrModuleEnabler+=t;;
 	--eval)		shift
 			if [ "$1" = eval ]; then
 			    shift
@@ -109,6 +158,89 @@ if [ $# -eq 0 ]; then
     printUsage "$0" >&2
     exit 2
 fi
+if [ "$isOnDebug" ]; then
+    [ -n "$stdinModule" ] && unset 'logFileDescriptors[0]'
+    [ -n "$stdoutModule" ] && unset 'logFileDescriptors[1]'
+    [ -n "$stderrModule" ] && unset 'logFileDescriptors[2]'
+fi
+
+logWithPrefix()
+{
+    local prefix="${1?}"; shift
+    local isEOL=t
+    while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
+    do
+	printf '%s%s\n' "$prefix" "$line" >&3
+	printf "%s%s${isEOL:+\\n}" "$line"
+    done \
+}
+
+executeAndCapture0()
+{
+    logWithPrefix "$stdinPrefix" \
+	| executor "$@"
+}
+
+executeAndCapture1()
+{
+    executor "$@" \
+	| logWithPrefix "$stdoutPrefix"
+}
+
+executeAndCapture2()
+{
+    {
+	executor "$@" 4>&1 1>&2 2>&4 4>&- \
+	    | logWithPrefix "$stderrPrefix"
+    } 4>&1 1>&2 2>&4 4>&-
+}
+
+executeAndCapture01()
+{
+    logWithPrefix "$stdinPrefix" \
+	| executor "$@" \
+	| logWithPrefix "$stdoutPrefix"
+}
+
+executeAndCapture02()
+{
+    logWithPrefix "$stdinPrefix" \
+	| \
+	    {
+		executor "$@" 4>&1 1>&2 2>&4 4>&- \
+		    | logWithPrefix "$stderrPrefix"
+	    } 4>&1 1>&2 2>&4 4>&-
+}
+
+executeAndCapture12()
+{
+    {
+	executor "$@" 4>&1 1>&2 2>&4 4>&- \
+	    | logWithPrefix "$stderrPrefix"
+    } 4>&1 1>&2 2>&4 4>&- \
+	| logWithPrefix "$stdoutPrefix"
+}
+
+executeAndCapture012()
+{
+    logWithPrefix "$stdinPrefix" \
+	| \
+	    {
+		executor "$@" 4>&1 1>&2 2>&4 4>&- \
+	|	logWithPrefix "$stderrPrefix"
+	    } 4>&1 1>&2 2>&4 4>&- \
+	| logWithPrefix "$stdoutPrefix"
+}
+
+setSinkDefaults()
+{
+    case ",${DEBUG:-}," in
+	*,@(debug|${scriptName})=*,*)
+	    VERBOSE_SINK=",${DEBUG},"; VERBOSE_SINK="${VERBOSE_SINK#*,@(debug|${scriptName})=}"; VERBOSE_SINK="${VERBOSE_SINK%%,*}"
+	    ;;
+	*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+    esac
+}
 
 printfToTerm()
 {
@@ -126,12 +258,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 
     case ",${DEBUG:-}," in
 	*,${debuggee}${module:+:}${module},*)
-	    case ",${DEBUG:-}," in
-		*,@(debug|${scriptName})=*,*)
-		    VERBOSE_SINK=",${DEBUG},"; VERBOSE_SINK="${VERBOSE_SINK#*,@(debug|${scriptName})=}"; VERBOSE_SINK="${VERBOSE_SINK%%,*}"
-		    ;;
-		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
-	    esac
+	    setSinkDefaults
 	    isActive=t
 	    EXEC=''
 	    ;;
@@ -139,10 +266,46 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
+
+    [ -n "$stdinModule" ] \
+	&& case ",${DEBUG:-}," in
+	    *,${debuggee}:${stdinModule},*)
+		logFileDescriptors[0]+=$stdinModuleEnabler
+		setSinkDefaults
+		;;
+	    *,@(debug|${scriptName}),*)
+		printfToTerm '%s: Will log stdin with DEBUG=%q\n' "$scriptName" "${debuggee}:${stdinModule}"
+		;&
+	    *)	unset 'logFileDescriptors[0]';;
+	esac
+
+    [ -n "$stdoutModule" ] \
+	&& case ",${DEBUG:-}," in
+	    *,${debuggee}:${stdoutModule},*)
+		logFileDescriptors[1]+=$stdoutModuleEnabler
+		setSinkDefaults
+		;;
+	    *,@(debug|${scriptName}),*)
+		printfToTerm '%s: Will log stdout with DEBUG=%q\n' "$scriptName" "${debuggee}:${stdoutModule}"
+		;&
+	    *)	unset 'logFileDescriptors[1]';;
+	esac
+
+    [ -n "$stderrModule" ] \
+	&& case ",${DEBUG:-}," in
+	    *,${debuggee}:${stderrModule},*)
+		logFileDescriptors[2]+=$stderrModuleEnabler
+		setSinkDefaults
+		;;
+	    *,@(debug|${scriptName}),*)
+		printfToTerm '%s: Will log stderr with DEBUG=%q\n' "$scriptName" "${debuggee}:${stderrModule}"
+		;&
+	    *)	unset 'logFileDescriptors[2]';;
+	esac
 fi
 
 sink="${VERBOSE_SINK:-${isOnDebug:+$DEBUG_SINK}}"
-if [ "$isActive" ]; then
+if [ "$isActive" -o ${#logFileDescriptors[@]} -gt 0 ]; then
     case "$sink" in
 	'')		exec 3>&2;;
 	\&+([0-9]))	eval "exec 3>$sink";;
@@ -152,11 +315,27 @@ if [ "$isActive" ]; then
     nestingPrefix="$(debugNestingPrefix)"
     VERBOSE_IFS="${VERBOSE_IFS//$'\n'/$'\n'${nestingPrefix}}"
 
-    printer "$@"
+    [ "$isActive" ] && printer "$@"
 fi
 
-executor "$@"; status=$?
-if [ "$isOnDebug" ] && [ -n "$sink" ]; then
+stdinPrefix='0: '
+stdoutPrefix='1: '
+stderrPrefix='2: '
+logFileDescriptorCount="${logFileDescriptors[*]}"; logFileDescriptorCount="${logFileDescriptorCount// /}"
+case ${#logFileDescriptorCount} in
+    0)	launcher=executor;;
+    1)	stdinPrefix=''; stdoutPrefix=''; stderrPrefix='';&
+    *)	printf -v launcher '%d' "${!logFileDescriptors[@]}"; launcher="executeAndCapture${launcher}"
+	EXEC=''
+	;;
+esac
+
+$launcher "$@"; status=$?
+
+if [ "$isOnDebug" ] \
+    && [ "$isActive" -o ${#logFileDescriptors[@]} -gt 0 ] \
+    && [ -n "$sink" ]
+then
     printfToTerm "%s%s invocation logged to %q\\n" "$nestingPrefix" "$scriptName" "$sink"
 fi
 exit $status
