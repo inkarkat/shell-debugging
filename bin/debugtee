@@ -121,7 +121,7 @@ case ",${DEBUG}," in
 	sink="${DEBUGTEE_SINK:-$DEBUG_SINK}"
 	case "$sink" in
 	    '')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
-	    \&[0-9])	sink="/dev/fd/${sink#\&}";;
+	    \&+([0-9]))	sink="/dev/fd/${sink#\&}";;
 	    ?*)		trap finally EXIT;;
 	esac
 

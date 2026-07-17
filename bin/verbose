@@ -145,7 +145,7 @@ sink="${VERBOSE_SINK:-${isOnDebug:+$DEBUG_SINK}}"
 if [ "$isActive" ]; then
     case "$sink" in
 	'')		exec 3>&2;;
-	\&[0-9])	eval "exec 3>$sink";;
+	\&+([0-9]))	eval "exec 3>$sink";;
 	?*)		exec 3>>"$sink";;
     esac
 

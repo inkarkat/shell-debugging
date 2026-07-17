@@ -116,7 +116,7 @@ fi
 sink="${DUMPFILES_SINK:-${isOnDebug:+$DEBUG_SINK}}"
 case "$sink" in
     '')		exec >&2;;
-    \&[0-9])	eval "exec >$sink";;
+    \&+([0-9]))	eval "exec >$sink";;
     ?*)		exec >>"$sink";;
 esac
 

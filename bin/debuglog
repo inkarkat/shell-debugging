@@ -82,7 +82,7 @@ case ",${DEBUG:-}," in
 	sink="${DEBUGLOG_SINK:-$DEBUG_SINK}"
 	case "$sink" in
 	    '')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
-	    \&[0-9])	eval "exec >$sink";;
+	    \&+([0-9]))	eval "exec >$sink";;
 	    ?*)		exec >>"$sink";;
 	esac
 
