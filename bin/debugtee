@@ -27,8 +27,8 @@ filespec to the terminal at the end.
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 $ DEBUG=debug[tee]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.
-$ DEBUG=debug[tee] DEBUGGEE ... will show for what DEBUGGEE it will enable (if not
-  actually enabled).
+$ DEBUG=debug[tee] DEBUGGEE ... will show for what DEBUGGEE it will enable (if
+  not actually enabled).
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
@@ -52,8 +52,6 @@ HELPDESCRIPTION
 SEE ALSO:
 - dump-files [--on-debug] prints file contents, not pipelined standard input to
   a debug file.
-- echotrace writes arguments as an execution trace to standard error instead of
-  executing the passed command when debugging is enabled.
 HELPTEXT
 }
 

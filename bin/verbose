@@ -44,12 +44,18 @@ HELPDESCRIPTION
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 $ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.
-$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will enable (if not
-  actually enabled).
+$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will enable
+  (if not actually enabled).
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
+SEE ALSO:
+- dump-args-exec also prints command-line arguments (without nesting level), and
+  can prepend an argument count or use array syntax, but is more geared toward
+  data, not commands.
+- dump-status --verbose additionally prints the exit status of the COMMAND.
+
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
     *	Any exit status from COMMAND(s).
