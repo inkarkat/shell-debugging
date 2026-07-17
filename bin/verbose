@@ -65,6 +65,8 @@ $ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will ena
     --io-modules	Activate standard input / output / error logging only if
 			debugging for module "input" / "output" / "errors" of
 			the DEBUGGEE is enabled.
+			Syntactic sugar for --stdin-module input \\
+			    --stdout-module output --stderr-module errors
     --stdin-module MODULE
 			Log standard input (prefixed by 0: if more than one
 			input-output option is active) only if debugging for
@@ -329,6 +331,7 @@ case ${#logFileDescriptorCount} in
 esac
 
 $launcher "$@"; status=$?
+
 if [ "$isOnDebug" ] \
     && [ "$isActive" -o ${#logFileDescriptors[@]} -gt 0 ] \
     && [ -n "$sink" ]
