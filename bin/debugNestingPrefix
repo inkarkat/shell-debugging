@@ -3,9 +3,10 @@
 : ${DEBUGNESTINGPREFIX_BASE:=2}
 : ${PS4:='+ '}
 
+baseLevel=$((DEBUGNESTINGPREFIX_BASE + DEBUGNESTINGPREFIX_OFFSET))
 nestingPrefix=
-if [ $SHLVL -gt $DEBUGNESTINGPREFIX_BASE ]; then
-    nestingLevel=$((SHLVL - DEBUGNESTINGPREFIX_BASE))
+if [ $SHLVL -gt $baseLevel ]; then
+    nestingLevel=$((SHLVL - baseLevel))
 else
     # When a client command is directly invoked from an (interactive) terminal,
     # SHLVL is 2, but we still want to show a single nesting prefix.

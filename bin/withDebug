@@ -433,4 +433,7 @@ if [ "$isIncludeStderr" ]; then
     exec 5>&1 2>&3
 fi
 
+# This command itself creates one more nesting level.
+: ${DEBUGNESTINGPREFIX_OFFSET:=0}; let DEBUGNESTINGPREFIX_OFFSET+=1; export DEBUGNESTINGPREFIX_OFFSET
+
 eval "$commands"
