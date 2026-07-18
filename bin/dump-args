@@ -65,7 +65,7 @@ printShortUsage()
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
     printf 'Usage: %q %s\n' "$(basename "$1")" "$generalArgs [--] [ARG ...] [-?|-h|--help]"
-    printf 'Usage: [[DUMPARGS|DEBUG]_SINK=FILESPEC|&N] ${DEBUG:+%q %s}\n' "$(basename "$1")" "$generalArgs $debugArgs [--] [ARG ...]"
+    printf 'Usage: ${DEBUG:+[env (DUMPARGS|DEBUG)_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "$debugArgs ..."
 }
 printUsage()
 {

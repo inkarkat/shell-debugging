@@ -8,7 +8,7 @@ printShortUsage()
     [ "$isLogF" ] \
 	&& local args='[--prefix PREFIX [--prefix ...]] [--suffix SUFFIX [--suffix ...]] [--] FORMAT [ARG ...]' \
 	|| local args='[--] [MESSAGE ...]'
-    printf 'Usage: [DEBUG[LOG]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")${isLogF:+f}" "[--for DEBUGGEE] [-m|--module MODULE] $args [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env DEBUG[LOG]_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")${isLogF:+f}" "[--for DEBUGGEE] [-m|--module MODULE] $args [-?|-h|--help]"
 }
 printUsage()
 {

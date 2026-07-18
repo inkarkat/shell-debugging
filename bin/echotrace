@@ -10,7 +10,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [[ECHOTRACE|DEBUG]_SINK=FILESPEC|&N] ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '[--eval] [--for DEBUGGEE [-m|--module MODULE]] [--]' 'COMMAND [...] [-?|-h|--help]'
+    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [--] COMMAND [...] [-?|-h|--help]'
+    printf 'Usage: ${DEBUG:+[env ECHOTRACE_IFS=STRING|newline] [(ECHOTRACE|DEBUG)_SINK=FILESPEC|&N] %q %s} %s\n' "$(basename "$1")" '[--eval] --for DEBUGGEE [-m|--module MODULE] [--]' 'COMMAND [...]'
 }
 printUsage()
 {
