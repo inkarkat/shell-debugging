@@ -269,7 +269,7 @@ do
 	--inbox|-i)	shift; captureCommand=(saveToInbox); pager=();;
 	--to-separate-files|-s)
 			shift; sink='';;
-	--to-tty|-t)	shift; sink='/dev/tty';;
+	--to-tty|-t)	shift; sink='/dev/tty'; pager=();;
 	--interactive|-I)
 			shift; isInteractive=t;;
 	--verbose|-v)	shift; isVerbose=t;;
