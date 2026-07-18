@@ -263,7 +263,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 	    EXEC=''
 	    ;;
 	*,@(debug|${scriptName}),*)
-	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    printfToTerm '%s: Will log command with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
 
