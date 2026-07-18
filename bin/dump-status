@@ -119,8 +119,4 @@ if [ "$isVerbose" ]; then
 else
     printf '%s (%d)\n' "$1" "$status"
 fi
-
-if [ "$isOnDebug" ] && [ -n "$sink" ]; then
-    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
-fi
 exit $status

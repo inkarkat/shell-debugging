@@ -414,6 +414,15 @@ else
 	    "${pager[@]}" "$sink"
 	}
 	trap openPager EXIT
+    elif [ -f "$sink" ]; then
+	printLogLocation()
+	{
+	    [ -s "$sink" ] \
+		&& local message="Debugging diagnostics written to $sink" \
+		|| local message='No debugging diagnostics logged.'
+	    { printf >/dev/tty '%s%s\n' "$PS4" "$message"; } 2>/dev/null
+	}
+	trap printLogLocation EXIT
     fi
 fi
 

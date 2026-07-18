@@ -201,7 +201,3 @@ else
 	printf '%s%s\n' "$defaultPrefix" "$defaultSuffix"
     fi
 fi
-
-if [ $# -gt 0 ] && [ "$isOnDebug" ] && [ -n "$sink" ]; then
-    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
-fi

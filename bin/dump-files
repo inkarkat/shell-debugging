@@ -141,7 +141,3 @@ if [ "$isHeader" ]; then
 elif [ $# -gt 0 ]; then
     cat ${isNumber:+--number} -- "$@"
 fi
-
-if [ "$isOnDebug" ] && [ -n "$sink" ]; then
-    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
-fi

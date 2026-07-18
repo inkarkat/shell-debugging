@@ -330,12 +330,4 @@ case ${#logFileDescriptorCount} in
 	;;
 esac
 
-$launcher "$@"; status=$?
-
-if [ "$isOnDebug" ] \
-    && [ "$isActive" -o ${#logFileDescriptors[@]} -gt 0 ] \
-    && [ -n "$sink" ]
-then
-    printfToTerm "%s%s invocation logged to %q\\n" "$nestingPrefix" "$scriptName" "$sink"
-fi
-exit $status
+$launcher "$@"
