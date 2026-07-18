@@ -8,7 +8,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+[env DEBUG[CUSTOM]_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGCUSTOM_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env DEBUG[CUSTOM]_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "[-I|--invert-match] [--for DEBUGGEE] [-m|--module MODULE] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGCUSTOM_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -34,6 +34,8 @@ HELPDESCRIPTION
     printShortUsage "$1"
     echo
     cat <<HELPTEXT
+    --invert-match|-I	Execute COMMAND(s) if debugging is NOT enabled for the
+			caller.
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
@@ -43,6 +45,7 @@ EXIT STATUS:
 HELPTEXT
 }
 
+isInvertMatch=
 debuggee="$DEBUG_DEBUGGEE"
 module=
 commands=
@@ -50,6 +53,8 @@ while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--invert-match|-I)
+			shift; isInvertMatch=t;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
 
@@ -87,7 +92,12 @@ if [ -z "$commands" ]; then
     exit 2
 fi >&2
 
-[ -n "$DEBUG" ] || exit 0
+if [ -z "$DEBUG" ]; then
+    if [ "$isInvertMatch" ]; then
+	eval "$commands"
+    fi
+    exit $?
+fi
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
@@ -106,16 +116,22 @@ case ",${DEBUG:-}," in
 	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
-	sink="${DEBUGCUSTOM_SINK:-$DEBUG_SINK}"
-	case "$sink" in
-	    '')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
-	    \&+([0-9]))	eval "exec >$sink";;
-	    ?*)		exec >>"$sink";;
-	esac
+	if [ ! "$isInvertMatch" ]; then
+	    sink="${DEBUGCUSTOM_SINK:-$DEBUG_SINK}"
+	    case "$sink" in
+		'')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
+		\&+([0-9]))	eval "exec >$sink";;
+		?*)		exec >>"$sink";;
+	    esac
 
-	eval "$commands"
+	    eval "$commands"
+	    exit $?
+	fi
 	;;
     *,@(debug|${scriptName}),*)
 	{ printf >/dev/tty '%s: Will execute %s with DEBUG=%q\n' "$scriptName" "$(commandName --undefined 'passed command(s)' --eval "$commands")" "${debuggee}${module:+:}${module}"; } 2>/dev/null
 	;;
 esac
+if [ "$isInvertMatch" ]; then
+    eval "$commands"
+fi
