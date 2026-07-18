@@ -1,0 +1,121 @@
+#!/bin/bash
+shopt -qs extglob
+
+: ${DEBUGCUSTOM_COMMAND_JOINER=;}
+: ${DEBUGCUSTOM_EXEC_END=;}
+
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: ${DEBUG:+[env DEBUG[CUSTOM]_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGCUSTOM_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Execute COMMAND(s) if debugging is enabled for the caller; any output will be
+collected in a debug file (DEBUGGEE.log) / \$DEBUGCUSTOM_SINK / \$DEBUG_LOG:
+DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+With "DEBUG=debug[log]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
+FILESPEC instead.
+With "DEBUG=debug[log] DEBUGGEE ..." will show for what DEBUGGEE it will
+enable (if not actually enabled).
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
+			parent process.
+    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
+			enabled.
+EXIT STATUS:
+    2	Bad invocation, wrong or missing command-line arguments.
+HELPTEXT
+}
+
+debuggee="$DEBUG_DEBUGGEE"
+module=
+commands=
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--for)		shift; debuggee="${1?}"; shift;;
+	--module|-m)	shift; module="${1:?}"; shift;;
+
+	--command|-c)	shift; commands+="${commands:+ $DEBUGCUSTOM_COMMAND_JOINER }$1"; shift;;
+	--exec)		shift
+			cmd=
+			while [ $# -gt 0 -a "$1" != "$DEBUGCUSTOM_EXEC_END" ]
+			do
+			    printf -v quotedArg %q "$1"
+			    cmd+="${cmd:+ }${quotedArg}"
+			    shift
+			done
+			if [ $# -eq 0 ]; then
+			    echo "ERROR: --exec command must be concluded with '${DEBUGCUSTOM_EXEC_END}'"; echo; printUsage "$0"
+			    exit 2
+			fi >&2
+			shift
+			commands+="${commands:+ $DEBUGCUSTOM_COMMAND_JOINER }${cmd}"
+			;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
+if [ $# -ne 0 ]; then
+    # Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
+    # undo the effects of eval.
+    printf -v quotedSimpleCommand '%q ' "$@"
+    commands+="${commands:+ $DEBUGCUSTOM_COMMAND_JOINER }${quotedSimpleCommand% }"
+fi
+if [ -z "$commands" ]; then
+    echo "ERROR: No COMMAND(s) specified; need to pass -c|--command \"COMMANDLINE\", or --exec SIMPLECOMMAND [...] $DEBUGCUSTOM_EXEC_END or SIMPLECOMMAND."
+    echo
+    printUsage "$0"
+    exit 2
+fi >&2
+
+[ -n "$DEBUG" ] || exit 0
+
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
+if [ -z "$debuggee" ]; then
+    {
+	IFS= read -r -d '' debugCmd
+	IFS= read -r -d '' debugSecond
+    } < /proc/${PPID}/cmdline
+    debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
+fi
+
+case ",${DEBUG:-}," in
+    *,${debuggee}${module:+:}${module},*)
+	case ",${DEBUG:-}," in
+	    *,@(debug|${scriptName})=*,*) DEBUGCUSTOM_SINK=",${DEBUG},"; DEBUGCUSTOM_SINK="${DEBUGCUSTOM_SINK#*,@(debug|${scriptName})=}"; DEBUGCUSTOM_SINK="${DEBUGCUSTOM_SINK%%,*}"
+			    ;;
+	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+	esac
+
+	sink="${DEBUGCUSTOM_SINK:-$DEBUG_SINK}"
+	case "$sink" in
+	    '')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
+	    \&+([0-9]))	eval "exec >$sink";;
+	    ?*)		exec >>"$sink";;
+	esac
+
+	eval "$commands"
+	;;
+    *,@(debug|${scriptName}),*)
+	{ printf >/dev/tty '%s: Will execute %s with DEBUG=%q\n' "$scriptName" "$(commandName --undefined 'passed command(s)' --eval "$commands")" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	;;
+esac
