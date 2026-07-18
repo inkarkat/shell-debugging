@@ -96,6 +96,9 @@ if [ -z "$debuggee" ]; then
 fi
 case ",${DEBUG}," in
     *,${debuggee}${module:+:}${module},*)	;;
+    *,@(debug|${scriptName}),*)
+	{ printf >/dev/tty '%s: Will skip command execution and just log with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	;&
     *)  executor "$@"
 	exit $?
 	;;
