@@ -107,6 +107,8 @@ case ",${DEBUG:-}," in
 	    || debugCommandArgs=(--for "${debuggee}!")
 	;&
     *,${debuggee}${module:+:}${module},*)
+	;&
+    *,${debuggee}:*,*)	# Also activate on any module so that verbose's --io-modules|--*-module options will be considered. verbose will do proper module filtering, anyway; it's just a bit more inefficient.
 	case ",${DEBUG:-}," in
 	    *,@(debug|${scriptName})=*,*)
 		DEBUGCOMMAND_SINK=",${DEBUG},"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK#*,@(debug|${scriptName})=}"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK%%,*}"
