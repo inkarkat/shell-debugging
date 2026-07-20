@@ -127,7 +127,7 @@ esac
 
 if [ "$isHeader" ]; then
     isFirst=t
-    [ "$isOnDebug" ] && [ -s "$sink" ] && isFirst=
+    [ ! "$isOnDebug" ] && [ -s "$sink" ] && isFirst=
     let count=0
     for filespec
     do
@@ -142,7 +142,7 @@ if [ "$isHeader" ]; then
 	HEADER_PREFIX="${timestamp}${timestamp:+ }-- " \
 	    header ${isFirst:+--first} "${colorArg[@]}" -- "${description}${description:+ }${filePrefix}${fileDescription}"
 
-	isFirst=
+	[ "$isOnDebug" ] || isFirst=
 	cat ${isNumber:+--number} -- "$filespec"
     done
 elif [ $# -gt 0 ]; then
