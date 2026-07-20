@@ -30,10 +30,10 @@ HELPDESCRIPTION
     echo
     cat <<HELPTEXT
     --number|-n		Number all output lines.
-    --no-header		Omit the header line with the timestamp (which is added
-			by default).
+    --no-header		Omit the header line with the [timestamp on debug and]
+			filespec (which is printed by default).
     --description|-d DESCRIPTION
-			Prepend DESCRIPTION to the timestamp in the header line.
+			Prepend DESCRIPTION to the header.
     --on-debug|-D	Log FILE contents to a debug file (DEBUGGEE.log) only
 			when \$DEBUG refers to the DEBUGGEE, and print the debug
 			filespec to the terminal.
@@ -114,10 +114,12 @@ if [ "$isOnDebug" ]; then
     esac
 fi
 
+typeset -a colorArg=(--no-color)
 sink="${DUMPFILES_SINK:-${isOnDebug:+$DEBUG_SINK}}"
 case "$sink" in
     '')		exec >&2;;
     \&+([0-9]))	eval "exec >$sink";;
+    /dev/tty)	colorArg=();;&
     ?*)		exec >>"$sink";;
 esac
 
@@ -125,7 +127,7 @@ esac
 
 if [ "$isHeader" ]; then
     isFirst=t
-    [ "$isOnDebug" ] && [ -s "$sink" ] && isFirst=
+    [ ! "$isOnDebug" ] && [ -s "$sink" ] && isFirst=
     let count=0
     for filespec
     do
@@ -134,14 +136,15 @@ if [ "$isHeader" ]; then
 	    && fileDescription='stdin' \
 	    || fileDescription="$filespec"
 	filePrefix=''; [ $# -gt 1 ] && filePrefix="${count}:"
-	HEADER_STYLE=dashed-line header ${isFirst:+--first} --no-color -- "${description}${description:+ at }$(timestamp --logging) ${filePrefix}${fileDescription}"
-	isFirst=
+	timestamp=''; [ "$isOnDebug" ] && timestamp="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
+
+	HEADER_STYLE=dashed-line \
+	HEADER_PREFIX="${timestamp}${timestamp:+ }-- " \
+	    header ${isFirst:+--first} "${colorArg[@]}" -- "${description}${description:+ }${filePrefix}${fileDescription}"
+
+	[ "$isOnDebug" ] || isFirst=
 	cat ${isNumber:+--number} -- "$filespec"
     done
 elif [ $# -gt 0 ]; then
     cat ${isNumber:+--number} -- "$@"
-fi
-
-if [ "$isOnDebug" ] && [ -n "$sink" ]; then
-    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
 fi

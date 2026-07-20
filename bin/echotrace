@@ -6,12 +6,59 @@ shopt -qs extglob
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 
+getShortUsage()
+{
+    local usageSep
+    [ $# -gt 0 ] || set -- ''
+    while [ $# -gt 0 ]
+    do
+	local hadTopic=
+	case "$1" in
+	    ''|general) printf %s "${usageSep}${hadTopic:+ }" '[--eval]'; hadTopic=t;;&
+	    ''|debug)
+		[ -n "$1" ] \
+		    && local format='%s%s' \
+		    || local format='%s[%s]'
+		printf "$format" "${usageSep}${hadTopic:+ }" '--for DEBUGGEE [-m|--module MODULE]'; hadTopic=t;;&
+	    *)  [ "$hadTopic" ] || { echo "ERROR: Unknown short usage topic \"$1\"!" >&2; return 2; };;
+	esac
+	shift; usageSep=' '
+    done
+}
+getLongUsage()
+{
+    [ $# -gt 0 ] || set -- ''
+    while [ $# -gt 0 ]
+    do
+	local topic="$1"; shift
+	local hadTopic=
+	case "$topic" in
+	    ''|general)
+		cat <<HELPTEXT
+    --eval		Print the evaluation result instead of the (quoted)
+			eval.
+HELPTEXT
+		hadTopic=t
+		;;&
+	    ''|debug)
+		cat <<HELPTEXT
+    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
+			parent process.
+    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
+			enabled.
+HELPTEXT
+		hadTopic=t
+		;;&
+	    *)  [ "$hadTopic" ] || { echo "ERROR: Unknown long usage topic \"$topic\"!" >&2; return 2; };;
+	esac
+    done
+}
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[--eval] [--] COMMAND [...] [-?|-h|--help]'
-    printf 'Usage: ${DEBUG:+[env ECHOTRACE_IFS=STRING|newline] [(ECHOTRACE|DEBUG)_SINK=FILESPEC|&N] %q %s} %s\n' "$(basename "$1")" '[--eval] --for DEBUGGEE [-m|--module MODULE] [--]' 'COMMAND [...]'
+    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$(getShortUsage general) [--] COMMAND [...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env ECHOTRACE_IFS=STRING|newline] [(ECHOTRACE|DEBUG)_SINK=FILESPEC|&N] %q %s} %s\n' "$(basename "$1")" "$(getShortUsage general) $(getShortUsage debug) [--]" 'COMMAND [...]'
 }
 printUsage()
 {
@@ -27,21 +74,16 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 When \$DEBUG refers to the DEBUGGEE, write the COMMAND and its arguments
 (separated by a space or \$ECHOTRACE_IFS) as an execution trace (i.e. with \$PS4
-prepended and indicating the nesting level) to standard error / \$ECHOTRACE_SINK
-/ \$DEBUG_SINK without actually executing COMMAND. (Basically "set -x" but
-without the execution.) Else, the COMMAND is just executed as if echotrace
-weren't prepended.
+prepended and indicating the nesting level) to a debug file (DEBUGGEE.log) /
+\$ECHOTRACE_SINK / \$DEBUG_SINK without actually executing COMMAND. (Basically
+"set -x" but without the execution.) Else, the COMMAND is just executed as if
+echotrace weren't prepended.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
     echo
+    getLongUsage ''
     cat <<HELPTEXT
-    --eval		Print the evaluation result instead of the (quoted)
-			eval.
-    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
-			parent process.
-    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
-			enabled.
 SEE ALSO:
 - inboxtrace duplicates to the inbox location instead of standard error.
 HELPTEXT
@@ -50,7 +92,7 @@ HELPTEXT
 printer()
 {
     PRETTYPRINTQUOTEDARGS_IFS="$ECHOTRACE_IFS" \
-    PRETTYPRINTQUOTEDARGS_PREFIX="$nestingPrefix" \
+    PRETTYPRINTQUOTEDARGS_PREFIX="$printerPrefix" \
 	exec prettyPrintQuotedArgs -- "$@" >&3
 }
 executor()
@@ -61,12 +103,42 @@ executor()
 
 debuggee="$DEBUG_DEBUGGEE"
 module=
+option() { :; }
+parameter() { :; }
+parameterToSep() { :; }
+argCount() { :; }
+endOfOptionsAndParameters() { :; }
+noUnderstand() { :; }
+typeset -A understandsSubtopics=()
+isUnderstandSubtopic() {
+    [ $# -gt 0 -a ${#understandsSubtopics[@]} -gt 0 ] || return 0
+    local subtopic; for subtopic
+    do
+	[ "${understandsSubtopics["$subtopic"]}" ] && return 0
+    done
+    return 1
+}
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
-	--for)		shift; debuggee="${1?}"; shift;;
-	--module|-m)	shift; module="${1:?}"; shift;;
+	--get-short-usage)
+			shift; getShortUsage "$@"; exit $?;;
+	--get-long-usage)
+			shift; getLongUsage "$@"; exit $?;;
+	--understand-for)
+			shift; understandsSubtopics["$1"]=t; shift;;
+	--understands)	shift
+			option() { isUnderstandSubtopic "$@" || exit 1; printf 1; exit 0; }
+			parameter() { isUnderstandSubtopic "$@" || exit 1; printf 2; exit 0; }
+			parameterToSep() { argCount "$@"; }
+			argCount() { local argCount="${1:?}"; shift; isUnderstandSubtopic "$@" || exit 1; printf $argCount; exit 0; }
+			endOfOptionsAndParameters() { exit 99; }
+			noUnderstand() { exit 1; }
+			;;
+
+	--for)		shift; debuggee="${1?}"; shift; parameter debug;;
+	--module|-m)	shift; module="${1:?}"; shift; parameter debug;;
 	--eval)		shift
 			if [ "$1" = eval ]; then
 			    shift
@@ -76,17 +148,19 @@ do
 			    }
 			    printer()
 			    {
-				joinBy >&3 --prefix "${nestingPrefix}" -- "$ECHOTRACE_IFS" "$@"
+				joinBy >&3 --prefix "${printerPrefix}" -- "$ECHOTRACE_IFS" "$@"
 			    }
 			fi
+			option general
 			;;
-	--)		shift; break;;
-	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
-	*)		break;;
+	--)		endOfOptionsAndParameters; shift; break;;
+	-*)		noUnderstand; { echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		endOfOptionsAndParameters; break;;
     esac
 done
 [ $# -eq 0 ] && exit
 
+timestampPrefix=
 if [ -z "$debuggee" ]; then
     {
 	IFS= read -r -d '' debugCmd
@@ -95,20 +169,32 @@ if [ -z "$debuggee" ]; then
     debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
 fi
 case ",${DEBUG}," in
-    *,${debuggee}${module:+:}${module},*)	;;
+    *,${debuggee}${module:+:}${module},*)
+	case ",${DEBUG}," in
+	    *,@(debug|${scriptName})=*,*)
+		ECHOTRACE_SINK=",${DEBUG},"; ECHOTRACE_SINK="${ECHOTRACE_SINK#*,@(debug|${scriptName})=}"; ECHOTRACE_SINK="${ECHOTRACE_SINK%%,*}"
+		;;
+	esac
+	;;
+    *,@(debug|${scriptName}),*)
+	{ printf >/dev/tty '%s: Will skip command execution and just log with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	;&
     *)  executor "$@"
 	exit $?
 	;;
 esac
 
+: ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"}
 sink="${ECHOTRACE_SINK:-$DEBUG_SINK}"
 case "$sink" in
     '')		exec 3>&2;;
     \&+([0-9]))	eval "exec 3>$sink";;
     ?*)		exec 3>>"$sink";;
 esac
+timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
 
 nestingPrefix="$(debugNestingPrefix)"
 ECHOTRACE_IFS="${ECHOTRACE_IFS//$'\n'/$'\n'${nestingPrefix}}"
+printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
 
 printer "$@"

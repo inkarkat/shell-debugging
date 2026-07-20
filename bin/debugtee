@@ -130,7 +130,7 @@ case ",${DEBUG}," in
 
 	if [ "$isHeader" ]; then
 	    isFirst=; [ ! "$isAppend" ] || [ ! -s "$sink" ] && isFirst=t;
-	    eval 'HEADER_STYLE=dashed-line header ${isFirst:+--first} --no-color -- "${description}${description:+ at }$(timestamp --logging)"' ">${isAppend:+>} \"$sink\""
+	    eval 'HEADER_STYLE=dashed-line header ${isFirst:+--first} --no-color -- "${description}${description:+ at }$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"' ">${isAppend:+>} \"$sink\""
 	    isAppend=t
 	fi
 	tee ${isAppend:+--append} -- "$sink"

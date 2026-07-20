@@ -2,21 +2,22 @@
 shopt -qs extglob
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
-readonly generalArgs='[-a|--array NAME] [-v|--verbose]'
-readonly debugArgs='--D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]'
 getShortUsage()
 {
     local usageSep
     [ $# -gt 0 ] || set -- ''
     while [ $# -gt 0 ]
     do
+	local hadTopic=
 	case "$1" in
-	    '') printf %s "$usageSep" "$generalArgs [${debugArgs}]";;
-	    general)
-		printf %s "$usageSep" "$generalArgs";;
-	    debug)
-		printf %s "$usageSep" "$debugArgs";;
-	    *)  echo "ERROR: Unknown short usage topic \"$1\"!" >&2; return 2;;
+	    ''|general)
+		printf %s "${usageSep}${hadTopic:+ }" '[-a|--array NAME] [-v|--verbose]'; hadTopic=t;;&
+	    ''|debug)
+		[ -n "$1" ] \
+		    && local format='%s%s' \
+		    || local format='%s[%s]'
+		printf "$format" "${usageSep}${hadTopic:+ }" '--D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]'; hadTopic=t;;&
+	    *)  [ "$hadTopic" ] || { echo "ERROR: Unknown short usage topic \"$1\"!" >&2; return 2; };;
 	esac
 	shift; usageSep=' '
     done
@@ -64,8 +65,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "$generalArgs [--] [ARG ...] [-?|-h|--help]"
-    printf 'Usage: ${DEBUG:+[env (DUMPARGS|DEBUG)_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "$debugArgs ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "$(getShortUsage general) [--] [ARG ...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env (DUMPARGS|DEBUG)_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "$(getShortUsage debug) ..."
 }
 printUsage()
 {
@@ -143,6 +144,7 @@ printfToTerm()
     { printf >/dev/tty "$@"; } 2>/dev/null
 }
 
+timestampPrefix=
 if [ "$isOnDebug" ]; then
     [ -n "$DEBUG" ] || exit 99
 
@@ -162,6 +164,7 @@ if [ "$isOnDebug" ]; then
 		    ;;
 		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	    esac
+	    timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
 	    ;;
 	*,@(debug|${scriptName}),*)
 	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
@@ -183,25 +186,22 @@ if [ "$isVerbose" ]; then
 	let argCnt=$startIndex
 	while [ $# -gt 0 ]
 	do
-	    PRETTYPRINTQUOTEDARGS_PREFIX="${verbosePrefix}${argCnt}${verboseSuffix}" \
+	    PRETTYPRINTQUOTEDARGS_PREFIX="${timestampPrefix}${timestampPrefix:+ }${verbosePrefix}${argCnt}${verboseSuffix}" \
 		prettyPrintQuotedArgs -- "$1"
 	    shift
 	    let argCnt+=1
+	    timestampPrefix="${timestampPrefix//?/ }"
 	done
     else
-	printf '%s%s\n' "$defaultPrefix" "$defaultSuffix"
+	printf '%s%s%s\n' "${timestampPrefix}${timestampPrefix:+ }" "$defaultPrefix" "$defaultSuffix"
     fi
 else
     quotedArgs=; if [ $# -gt 0 ]; then printf -v quotedArgs '%q ' "$@"; quotedArgs=${quotedArgs% }; fi
     if [ $# -gt 0 ]; then
-	PRETTYPRINTQUOTEDARGS_PREFIX="$defaultPrefix" \
+	PRETTYPRINTQUOTEDARGS_PREFIX="${timestampPrefix}${timestampPrefix:+ }${defaultPrefix}" \
 	    PRETTYPRINTQUOTEDARGS_SUFFIX="$defaultSuffix" \
 	    prettyPrintQuotedArgs -- "$@"
     elif [ -n "${defaultPrefix}${defaultSuffix}" ]; then
-	printf '%s%s\n' "$defaultPrefix" "$defaultSuffix"
+	printf '%s%s%s\n' "${timestampPrefix}${timestampPrefix:+ }" "$defaultPrefix" "$defaultSuffix"
     fi
-fi
-
-if [ $# -gt 0 ] && [ "$isOnDebug" ] && [ -n "$sink" ]; then
-    printfToTerm "%s%s to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
 fi

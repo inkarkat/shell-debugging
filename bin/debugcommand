@@ -1,0 +1,133 @@
+#!/bin/bash
+shopt -qs extglob
+
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: ${DEBUG:+[env DEBUGCOMMAND_IFS=STRING|newline [DEBUG[COMMAND]_SINK=FILESPEC|&N]] %q %s} %s\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] $(echotrace --get-short-usage general 2>/dev/null) $(verbose --get-short-usage general io debug-io 2>/dev/null) [--]" '[SIMPLECOMMAND ...]'
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+If debugging is not enabled for the caller, simply execute COMMAND.
+When \$DEBUG refers plainly to the DEBUGGEE, COMMAND is executed and additionally
+it's written as an execution trace.
+When \$DEBUG refers to DEBUGGEE!, COMMAND is NOT executed and just written as an
+execution trace.
+Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGCOMMAND_SINK /
+\$DEBUG_SINK.
+DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+With "DEBUG=debug[command]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
+FILESPEC instead.
+With "DEBUG=debug[command] DEBUGGEE ..." will show for what DEBUGGEE it will
+enable (if not actually enabled).
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
+			parent process.
+    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
+			enabled.
+HELPTEXT
+    echotrace --get-long-usage general 2>/dev/null
+    verbose --get-long-usage general io debug-io 2>/dev/null
+    cat <<HELPTEXT
+SEE ALSO:
+- echotrace is used for the sole execution trace.
+- verbose is used for the execution and execution trace.
+
+EXIT STATUS:
+    2	Bad invocation, wrong or missing command-line arguments.
+    *	Any exit status from COMMAND(s).
+HELPTEXT
+}
+
+debuggee="$DEBUG_DEBUGGEE"
+module=
+typeset -a echotraceArgs=()
+typeset -a verboseArgs=()
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--for)		shift; debuggee="${1?}"; shift;;
+	--module|-m)	shift; module="${1:?}"; shift;;
+	--)		shift; break;;
+	-*)		if argCount=$(echotrace --understand-for general --understands "$@"); then
+			    while ((argCount-- > 0))
+			    do
+				echotraceArgs+=("$1"); shift
+			    done
+			elif [ $? -eq 2 ]; then
+			    exit 2
+			elif argCount=$(verbose --understand-for general --understand-for io --understand-for debug-io --understands "$@"); then
+			    while ((argCount-- > 0))
+			    do
+				verboseArgs+=("$1"); shift
+			    done
+			elif [ $? -eq 2 ]; then
+			    exit 2
+			else
+			    { echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2
+			fi
+			;;
+	*)		break;;
+    esac
+done
+[ -n "$DEBUG" ] || exec "$@"
+
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
+if [ -z "$debuggee" ]; then
+    {
+	IFS= read -r -d '' debugCmd
+	IFS= read -r -d '' debugSecond
+    } < /proc/${PPID}/cmdline
+    debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
+fi
+
+typeset -a debugCommand=(verbose "${verboseArgs[@]}" --on-debug)
+typeset -a debugCommandArgs=(--for "$debuggee" ${module:+--module "$module"})
+case ",${DEBUG:-}," in
+    *,${debuggee}${module:+:}${module}!,*)
+	debugCommand=(echotrace "${echotraceArgs[@]}")
+	[ -n "$module" ] \
+	    && debugCommandArgs=(--for "$debuggee" --module "${module}!") \
+	    || debugCommandArgs=(--for "${debuggee}!")
+	;&
+    *,${debuggee}${module:+:}${module},*)
+	;&
+    *,${debuggee}:*,*)	# Also activate on any module so that verbose's --io-modules|--*-module options will be considered. verbose will do proper module filtering, anyway; it's just a bit more inefficient.
+	case ",${DEBUG:-}," in
+	    *,@(debug|${scriptName})=*,*)
+		DEBUGCOMMAND_SINK=",${DEBUG},"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK#*,@(debug|${scriptName})=}"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK%%,*}"
+		;;
+	esac
+
+	if [ -n "${DEBUGCOMMAND_IFS+t}" ]; then
+	    export VERBOSE_IFS="$DEBUGCOMMAND_IFS"
+	    export ECHOTRACE_IFS="$DEBUGCOMMAND_IFS"
+	fi
+	: ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"}
+	export VERBOSE_SINK="${DEBUGCOMMAND_SINK:-$DEBUG_SINK}"
+	export ECHOTRACE_SINK="${DEBUGCOMMAND_SINK:-$DEBUG_SINK}"
+
+	exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
+	;;
+    *,@(debug|${scriptName}|verbose),*)
+	{ printf >/dev/tty '%s: Will log [and skip] command execution with DEBUG=%q[!]\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
+	;;
+esac
+exec "$@"
