@@ -74,10 +74,10 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 When \$DEBUG refers to the DEBUGGEE, write the COMMAND and its arguments
 (separated by a space or \$ECHOTRACE_IFS) as an execution trace (i.e. with \$PS4
-prepended and indicating the nesting level) to standard error / \$ECHOTRACE_SINK
-/ \$DEBUG_SINK without actually executing COMMAND. (Basically "set -x" but
-without the execution.) Else, the COMMAND is just executed as if echotrace
-weren't prepended.
+prepended and indicating the nesting level) to a debug file (DEBUGGEE.log) /
+\$ECHOTRACE_SINK / \$DEBUG_SINK without actually executing COMMAND. (Basically
+"set -x" but without the execution.) Else, the COMMAND is just executed as if
+echotrace weren't prepended.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
@@ -168,7 +168,13 @@ if [ -z "$debuggee" ]; then
     debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
 fi
 case ",${DEBUG}," in
-    *,${debuggee}${module:+:}${module},*)	;;
+    *,${debuggee}${module:+:}${module},*)
+	case ",${DEBUG}," in
+	    *,@(debug|${scriptName})=*,*)
+		ECHOTRACE_SINK=",${DEBUG},"; ECHOTRACE_SINK="${ECHOTRACE_SINK#*,@(debug|${scriptName})=}"; ECHOTRACE_SINK="${ECHOTRACE_SINK%%,*}"
+		;;
+	esac
+	;;
     *,@(debug|${scriptName}),*)
 	{ printf >/dev/tty '%s: Will skip command execution and just log with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
 	;&
@@ -177,6 +183,7 @@ case ",${DEBUG}," in
 	;;
 esac
 
+: ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"}
 sink="${ECHOTRACE_SINK:-$DEBUG_SINK}"
 case "$sink" in
     '')		exec 3>&2;;
