@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -52,6 +52,7 @@ HELPDESCRIPTION
 			everything into a single log file (named after the first
 			passed COMMAND) / the inbox.
     --to-tty|-t		Write the debugging diagnostics to the terminal instead.
+    --no-timestamps|-T	Don't prepend timestamps to the debugging diagnostics.
     --interactive|-I	Source the COMMAND in an interactive shell. Only works
 			if COMMAND starts with "." or "source".
     --verbose|-v	Print the full command line (with all debugging
@@ -153,6 +154,7 @@ handleRecall()
     local overrideInbox=
     local overrideSeparateFiles=
     local overrideToTTY=
+    local overrideNoTimestamps=
     local overrideTo=
     typeset -A overrideFor=()
     typeset -A overrideModules=()
@@ -170,6 +172,7 @@ handleRecall()
 	    --to-separate-files|-s)
 				shift; overrideSeparateFiles=t;;
 	    --to-tty|-t)	shift; overrideToTTY=t;;
+	    --no-timestamps|-T)	shift; overrideNoTimestamps=t;;
 	    --to)		shift; overrideTo="$1"; shift;;
 	    --for)		shift; overrideFor["$1"]=t; shift;;
 	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
@@ -197,6 +200,7 @@ handleRecall()
 	    --to-separate-files|-s)
 				[ "$overrideSeparateFiles" ] && overrideSeparateFiles= || allargs+=("$1"); shift;;
 	    --to-tty|-t)	[ "$overrideToTTY" ] && overrideToTTY= || allargs+=("$1"); shift;;
+	    --no-timestamps|-T)	[ "$overrideNoTimestamps" ] && overrideNoTimestamps= || allargs+=("$1"); shift;;
 	    --to)		[ -n "$overrideTo" ] && overrideTo= || allargs+=("$1" "$2"); shift; shift;;
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["$2"]}" ] && unset "overrideModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
@@ -218,6 +222,7 @@ handleRecall()
     [ "$overrideInbox" ] && newArgs+=(--inbox)
     [ "$overrideSeparateFiles" ] && newArgs+=(--to-separate-files)
     [ "$overrideToTTY" ] && newArgs+=(--to-tty)
+    [ "$overrideNoTimestamps" ] && newArgs+=(--no-timestamps)
     [ -n "$overrideTo" ] && newArgs+=(--to "$overrideTo")
     local arg
     for arg in "${!overrideFor[@]}"
@@ -272,6 +277,8 @@ do
 	--to-tty|-t)	shift; sink='/dev/tty'; pager=()
 			[ -n "${DEBUG_TIMESTAMP_COMMAND+t}" ] || export DEBUG_TIMESTAMP_COMMAND=''
 			;;
+	--no-timestamps|-T)
+			shift; export DEBUG_TIMESTAMP_COMMAND='';;
 	--interactive|-I)
 			shift; isInteractive=t;;
 	--verbose|-v)	shift; isVerbose=t;;
