@@ -33,7 +33,7 @@ HELPDESCRIPTION
     --no-header		Omit the header line with the timestamp (which is added
 			by default).
     --description|-d DESCRIPTION
-			Prepend DESCRIPTION to the timestamp in the header line.
+			Prepend DESCRIPTION to the header.
     --on-debug|-D	Log FILE contents to a debug file (DEBUGGEE.log) only
 			when \$DEBUG refers to the DEBUGGEE, and print the debug
 			filespec to the terminal.
@@ -114,10 +114,12 @@ if [ "$isOnDebug" ]; then
     esac
 fi
 
+typeset -a colorArg=(--no-color)
 sink="${DUMPFILES_SINK:-${isOnDebug:+$DEBUG_SINK}}"
 case "$sink" in
     '')		exec >&2;;
     \&+([0-9]))	eval "exec >$sink";;
+    /dev/tty)	colorArg=();;&
     ?*)		exec >>"$sink";;
 esac
 
@@ -134,7 +136,9 @@ if [ "$isHeader" ]; then
 	    && fileDescription='stdin' \
 	    || fileDescription="$filespec"
 	filePrefix=''; [ $# -gt 1 ] && filePrefix="${count}:"
-	HEADER_STYLE=dashed-line header ${isFirst:+--first} --no-color -- "${description}${description:+ at }$(timestamp --logging) ${filePrefix}${fileDescription}"
+	HEADER_STYLE=dashed-line \
+	HEADER_PREFIX="$(timestamp --logging) -- " \
+	    header ${isFirst:+--first} "${colorArg[@]}" -- "${description}${description:+ }${filePrefix}${fileDescription}"
 	isFirst=
 	cat ${isNumber:+--number} -- "$filespec"
     done
