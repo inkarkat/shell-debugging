@@ -125,8 +125,9 @@ case ",${DEBUG:-}," in
 
 	exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
 	;;
-    *,@(debug|${scriptName}),*)
+    *,@(debug|${scriptName}|verbose),*)
 	{ printf >/dev/tty '%s: Will log [and skip] command execution with DEBUG=%q[!]\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
 	;;
 esac
 exec "$@"
