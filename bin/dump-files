@@ -30,8 +30,8 @@ HELPDESCRIPTION
     echo
     cat <<HELPTEXT
     --number|-n		Number all output lines.
-    --no-header		Omit the header line with the timestamp (which is added
-			by default).
+    --no-header		Omit the header line with the [timestamp on debug and]
+			filespec (which is printed by default).
     --description|-d DESCRIPTION
 			Prepend DESCRIPTION to the header.
     --on-debug|-D	Log FILE contents to a debug file (DEBUGGEE.log) only
@@ -137,7 +137,7 @@ if [ "$isHeader" ]; then
 	    || fileDescription="$filespec"
 	filePrefix=''; [ $# -gt 1 ] && filePrefix="${count}:"
 	HEADER_STYLE=dashed-line \
-	HEADER_PREFIX="$(timestamp --logging) -- " \
+	HEADER_PREFIX="${isOnDebug:+$(timestamp --logging) }-- " \
 	    header ${isFirst:+--first} "${colorArg[@]}" -- "${description}${description:+ }${filePrefix}${fileDescription}"
 	isFirst=
 	cat ${isNumber:+--number} -- "$filespec"
