@@ -92,7 +92,7 @@ HELPTEXT
 printer()
 {
     PRETTYPRINTQUOTEDARGS_IFS="$ECHOTRACE_IFS" \
-    PRETTYPRINTQUOTEDARGS_PREFIX="$nestingPrefix" \
+    PRETTYPRINTQUOTEDARGS_PREFIX="$printerPrefix" \
 	exec prettyPrintQuotedArgs -- "$@" >&3
 }
 executor()
@@ -148,7 +148,7 @@ do
 			    }
 			    printer()
 			    {
-				joinBy >&3 --prefix "${nestingPrefix}" -- "$ECHOTRACE_IFS" "$@"
+				joinBy >&3 --prefix "${printerPrefix}" -- "$ECHOTRACE_IFS" "$@"
 			    }
 			fi
 			option general
@@ -160,6 +160,7 @@ do
 done
 [ $# -eq 0 ] && exit
 
+timestampPrefix=
 if [ -z "$debuggee" ]; then
     {
 	IFS= read -r -d '' debugCmd
@@ -190,8 +191,10 @@ case "$sink" in
     \&+([0-9]))	eval "exec 3>$sink";;
     ?*)		exec 3>>"$sink";;
 esac
+timestampPrefix="$(timestamp --logging)"
 
 nestingPrefix="$(debugNestingPrefix)"
 ECHOTRACE_IFS="${ECHOTRACE_IFS//$'\n'/$'\n'${nestingPrefix}}"
+printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
 
 printer "$@"

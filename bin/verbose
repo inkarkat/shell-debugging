@@ -152,7 +152,7 @@ HELPTEXT
 printer()
 {
     PRETTYPRINTQUOTEDARGS_IFS="$VERBOSE_IFS" \
-    PRETTYPRINTQUOTEDARGS_PREFIX="$nestingPrefix" \
+    PRETTYPRINTQUOTEDARGS_PREFIX="$printerPrefix" \
 	prettyPrintQuotedArgs -- "$@" >&3
 }
 executor()
@@ -226,7 +226,7 @@ do
 			    shift
 			    printer()
 			    {
-				joinBy >&3 --prefix "${nestingPrefix}" -- "$VERBOSE_IFS" "$@"
+				joinBy >&3 --prefix "${printerPrefix}" -- "$VERBOSE_IFS" "$@"
 			    }
 			    executor()
 			    {
@@ -328,6 +328,8 @@ setSinkDefaults()
 	    ;;
 	*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
     esac
+
+    timestampPrefix="$(timestamp --logging)"
 }
 
 printfToTerm()
@@ -335,6 +337,7 @@ printfToTerm()
     { printf >/dev/tty "$@"; } 2>/dev/null
 }
 
+timestampPrefix=
 if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
     if [ -z "$debuggee" ]; then
 	{
@@ -402,6 +405,7 @@ if [ "$isActive" -o ${#logFileDescriptors[@]} -gt 0 ]; then
 
     nestingPrefix="$(debugNestingPrefix)"
     VERBOSE_IFS="${VERBOSE_IFS//$'\n'/$'\n'${nestingPrefix}}"
+    printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
 
     [ "$isActive" ] && printer "$@"
 fi

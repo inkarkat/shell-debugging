@@ -144,6 +144,7 @@ printfToTerm()
     { printf >/dev/tty "$@"; } 2>/dev/null
 }
 
+timestampPrefix=
 if [ "$isOnDebug" ]; then
     [ -n "$DEBUG" ] || exit 99
 
@@ -163,6 +164,7 @@ if [ "$isOnDebug" ]; then
 		    ;;
 		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	    esac
+	    timestampPrefix="$(timestamp --logging)"
 	    ;;
 	*,@(debug|${scriptName}),*)
 	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
@@ -184,21 +186,22 @@ if [ "$isVerbose" ]; then
 	let argCnt=$startIndex
 	while [ $# -gt 0 ]
 	do
-	    PRETTYPRINTQUOTEDARGS_PREFIX="${verbosePrefix}${argCnt}${verboseSuffix}" \
+	    PRETTYPRINTQUOTEDARGS_PREFIX="${timestampPrefix}${timestampPrefix:+ }${verbosePrefix}${argCnt}${verboseSuffix}" \
 		prettyPrintQuotedArgs -- "$1"
 	    shift
 	    let argCnt+=1
+	    timestampPrefix="${timestampPrefix//?/ }"
 	done
     else
-	printf '%s%s\n' "$defaultPrefix" "$defaultSuffix"
+	printf '%s%s%s\n' "${timestampPrefix}${timestampPrefix:+ }" "$defaultPrefix" "$defaultSuffix"
     fi
 else
     quotedArgs=; if [ $# -gt 0 ]; then printf -v quotedArgs '%q ' "$@"; quotedArgs=${quotedArgs% }; fi
     if [ $# -gt 0 ]; then
-	PRETTYPRINTQUOTEDARGS_PREFIX="$defaultPrefix" \
+	PRETTYPRINTQUOTEDARGS_PREFIX="${timestampPrefix}${timestampPrefix:+ }${defaultPrefix}" \
 	    PRETTYPRINTQUOTEDARGS_SUFFIX="$defaultSuffix" \
 	    prettyPrintQuotedArgs -- "$@"
     elif [ -n "${defaultPrefix}${defaultSuffix}" ]; then
-	printf '%s%s\n' "$defaultPrefix" "$defaultSuffix"
+	printf '%s%s%s\n' "${timestampPrefix}${timestampPrefix:+ }" "$defaultPrefix" "$defaultSuffix"
     fi
 fi
