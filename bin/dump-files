@@ -136,9 +136,12 @@ if [ "$isHeader" ]; then
 	    && fileDescription='stdin' \
 	    || fileDescription="$filespec"
 	filePrefix=''; [ $# -gt 1 ] && filePrefix="${count}:"
+	timestamp=''; [ "$isOnDebug" ] && timestamp="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
+
 	HEADER_STYLE=dashed-line \
-	HEADER_PREFIX="${isOnDebug:+$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging}) }-- " \
+	HEADER_PREFIX="${timestamp}${timestamp:+ }-- " \
 	    header ${isFirst:+--first} "${colorArg[@]}" -- "${description}${description:+ }${filePrefix}${fileDescription}"
+
 	isFirst=
 	cat ${isNumber:+--number} -- "$filespec"
     done
