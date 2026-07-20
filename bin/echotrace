@@ -191,7 +191,7 @@ case "$sink" in
     \&+([0-9]))	eval "exec 3>$sink";;
     ?*)		exec 3>>"$sink";;
 esac
-timestampPrefix="$(timestamp --logging)"
+timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
 
 nestingPrefix="$(debugNestingPrefix)"
 ECHOTRACE_IFS="${ECHOTRACE_IFS//$'\n'/$'\n'${nestingPrefix}}"

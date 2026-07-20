@@ -164,7 +164,7 @@ if [ "$isOnDebug" ]; then
 		    ;;
 		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	    esac
-	    timestampPrefix="$(timestamp --logging)"
+	    timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
 	    ;;
 	*,@(debug|${scriptName}),*)
 	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"

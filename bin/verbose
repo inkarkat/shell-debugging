@@ -329,7 +329,7 @@ setSinkDefaults()
 	*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
     esac
 
-    timestampPrefix="$(timestamp --logging)"
+    timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
 }
 
 printfToTerm()

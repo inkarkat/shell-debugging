@@ -86,6 +86,7 @@ case ",${DEBUG:-}," in
 	    ?*)		exec >>"$sink";;
 	esac
 
+	[ -n "${DEBUG_TIMESTAMP_COMMAND+t}" ] && export LOG_TIMESTAMP_COMMAND="$DEBUG_TIMESTAMP_COMMAND"
 	if [ "$isLogF" ]; then
 	    logf --prefix "$debuggee (${module}${module:+, }${PPID}) " "$@"
 	else

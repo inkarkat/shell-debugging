@@ -137,7 +137,7 @@ if [ "$isHeader" ]; then
 	    || fileDescription="$filespec"
 	filePrefix=''; [ $# -gt 1 ] && filePrefix="${count}:"
 	HEADER_STYLE=dashed-line \
-	HEADER_PREFIX="${isOnDebug:+$(timestamp --logging) }-- " \
+	HEADER_PREFIX="${isOnDebug:+$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging}) }-- " \
 	    header ${isFirst:+--first} "${colorArg[@]}" -- "${description}${description:+ }${filePrefix}${fileDescription}"
 	isFirst=
 	cat ${isNumber:+--number} -- "$filespec"
