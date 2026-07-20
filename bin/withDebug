@@ -269,7 +269,9 @@ do
 	--inbox|-i)	shift; captureCommand=(saveToInbox); pager=();;
 	--to-separate-files|-s)
 			shift; sink='';;
-	--to-tty|-t)	shift; sink='/dev/tty'; pager=();;
+	--to-tty|-t)	shift; sink='/dev/tty'; pager=()
+			[ -n "${DEBUG_TIMESTAMP_COMMAND+t}" ] || export DEBUG_TIMESTAMP_COMMAND=''
+			;;
 	--interactive|-I)
 			shift; isInteractive=t;;
 	--verbose|-v)	shift; isVerbose=t;;
