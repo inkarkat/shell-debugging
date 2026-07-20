@@ -2,21 +2,22 @@
 shopt -qs extglob
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
-readonly generalArgs='[-a|--array NAME] [-v|--verbose]'
-readonly debugArgs='--D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]'
 getShortUsage()
 {
     local usageSep
     [ $# -gt 0 ] || set -- ''
     while [ $# -gt 0 ]
     do
+	local hadTopic=
 	case "$1" in
-	    '') printf %s "$usageSep" "$generalArgs [${debugArgs}]";;
-	    general)
-		printf %s "$usageSep" "$generalArgs";;
-	    debug)
-		printf %s "$usageSep" "$debugArgs";;
-	    *)  echo "ERROR: Unknown short usage topic \"$1\"!" >&2; return 2;;
+	    ''|general)
+		printf %s "${usageSep}${hadTopic:+ }" '[-a|--array NAME] [-v|--verbose]'; hadTopic=t;;&
+	    ''|debug)
+		[ -n "$1" ] \
+		    && local format='%s%s' \
+		    || local format='%s[%s]'
+		printf "$format" "${usageSep}${hadTopic:+ }" '--D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]'; hadTopic=t;;&
+	    *)  [ "$hadTopic" ] || { echo "ERROR: Unknown short usage topic \"$1\"!" >&2; return 2; };;
 	esac
 	shift; usageSep=' '
     done
@@ -64,8 +65,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "$generalArgs [--] [ARG ...] [-?|-h|--help]"
-    printf 'Usage: ${DEBUG:+[env (DUMPARGS|DEBUG)_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "$debugArgs ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "$(getShortUsage general) [--] [ARG ...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env (DUMPARGS|DEBUG)_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "$(getShortUsage debug) ..."
 }
 printUsage()
 {
