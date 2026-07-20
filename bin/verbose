@@ -172,6 +172,21 @@ isActive=t
 isOnDebug=
 debuggee="$DEBUG_DEBUGGEE"
 module=
+option() { :; }
+parameter() { :; }
+parameterToSep() { :; }
+argCount() { :; }
+endOfOptionsAndParameters() { :; }
+noUnderstand() { :; }
+typeset -A understandsSubtopics=()
+isUnderstandSubtopic() {
+    [ $# -gt 0 -a ${#understandsSubtopics[@]} -gt 0 ] || return 0
+    local subtopic; for subtopic
+    do
+	[ "${understandsSubtopics["$subtopic"]}" ] && return 0
+    done
+    return 1
+}
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -180,21 +195,32 @@ do
 			shift; getShortUsage "$@"; exit $?;;
 	--get-long-usage)
 			shift; getLongUsage "$@"; exit $?;;
+	--understand-for)
+			shift; understandsSubtopics["$1"]=t; shift;;
+	--understands)	shift
+			option() { isUnderstandSubtopic "$@" || exit 1; printf 1; exit 0; }
+			parameter() { isUnderstandSubtopic "$@" || exit 1; printf 2; exit 0; }
+			parameterToSep() { argCount "$@"; }
+			argCount() { local argCount="${1:?}"; shift; isUnderstandSubtopic "$@" || exit 1; printf $argCount; exit 0; }
+			endOfOptionsAndParameters() { exit 99; }
+			noUnderstand() { exit 1; }
+			;;
 
-	--stdin|-0)	shift; logFileDescriptors[0]+=t;;
-	--stdout|-1)	shift; logFileDescriptors[1]+=t;;
-	--stderr|-2)	shift; logFileDescriptors[2]+=t;;
-	--on-debug|-D)	shift; isOnDebug=t; isActive=;;
-	--for)		shift; debuggee="${1?}"; shift;;
-	--module|-m)	shift; module="${1:?}"; shift;;
+	--stdin|-0)	shift; logFileDescriptors[0]+=t; option io;;
+	--stdout|-1)	shift; logFileDescriptors[1]+=t; option io;;
+	--stderr|-2)	shift; logFileDescriptors[2]+=t; option io;;
+	--on-debug|-D)	shift; isOnDebug=t; isActive=; option debug;;
+	--for)		shift; debuggee="${1?}"; shift; option debug;;
+	--module|-m)	shift; module="${1:?}"; shift; option debug;;
 	--io-modules)	shift
 			stdinModule='input'; stdinModuleEnabler+=t
 			stdoutModule='output'; stdoutModuleEnabler+=t
 			stderrModule='errors'; stderrModuleEnabler+=t
+			option debug-io
 			;;
-	--stdin-module)	shift; stdinModule="${1:?}"; shift; stdinModuleEnabler+=t;;
-	--stdout-module) shift; stdoutModule="${1:?}"; shift; stdoutModuleEnabler+=t;;
-	--stderr-module) shift; stderrModule="${1:?}"; shift; stderrModuleEnabler+=t;;
+	--stdin-module)	shift; stdinModule="${1:?}"; shift; stdinModuleEnabler+=t; parameter debug-io;;
+	--stdout-module) shift; stdoutModule="${1:?}"; shift; stdoutModuleEnabler+=t; parameter debug-io;;
+	--stderr-module) shift; stderrModule="${1:?}"; shift; stderrModuleEnabler+=t; parameter debug-io;;
 	--eval)		shift
 			if [ "$1" = eval ]; then
 			    shift
@@ -207,10 +233,11 @@ do
 				eval "$@"
 			    }
 			fi
+			option general
 			;;
-	--)		shift; break;;
-	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
-	*)		break;;
+	--)		endOfOptionsAndParameters; shift; break;;
+	-*)		noUnderstand; { echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		endOfOptionsAndParameters; break;;
     esac
 done
 if [ $# -eq 0 ]; then

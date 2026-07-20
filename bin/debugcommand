@@ -56,6 +56,8 @@ HELPTEXT
 
 debuggee="$DEBUG_DEBUGGEE"
 module=
+typeset -a echotraceArgs=()
+typeset -a verboseArgs=()
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -63,7 +65,24 @@ do
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
 	--)		shift; break;;
-	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	-*)		if argCount=$(echotrace --understand-for general --understands "$@"); then
+			    while ((argCount-- > 0))
+			    do
+				echotraceArgs+=("$1"); shift
+			    done
+			elif [ $? -eq 2 ]; then
+			    exit 2
+			elif argCount=$(verbose --understand-for general --understand-for io --understand-for debug-io --understands "$@"); then
+			    while ((argCount-- > 0))
+			    do
+				verboseArgs+=("$1"); shift
+			    done
+			elif [ $? -eq 2 ]; then
+			    exit 2
+			else
+			    { echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2
+			fi
+			;;
 	*)		break;;
     esac
 done
@@ -78,11 +97,11 @@ if [ -z "$debuggee" ]; then
     debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
 fi
 
-typeset -a debugCommand=(verbose --on-debug)
+typeset -a debugCommand=(verbose "${verboseArgs[@]}" --on-debug)
 typeset -a debugCommandArgs=(--for "$debuggee" ${module:+--module "$module"})
 case ",${DEBUG:-}," in
     *,${debuggee}${module:+:}${module}!,*)
-	debugCommand=(echotrace)
+	debugCommand=(echotrace "${echotraceArgs[@]}")
 	[ -n "$module" ] \
 	    && debugCommandArgs=(--for "$debuggee" --module "${module}!") \
 	    || debugCommandArgs=(--for "${debuggee}!")
