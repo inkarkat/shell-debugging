@@ -5,7 +5,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+[env DEBUGCOMMAND_IFS=STRING|newline [DEBUG[COMMAND]_SINK=FILESPEC|&N]] %q %s} %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--]' '[SIMPLECOMMAND ...]'
+    printf 'Usage: ${DEBUG:+[env DEBUGCOMMAND_IFS=STRING|newline [DEBUG[COMMAND]_SINK=FILESPEC|&N]] %q %s} %s\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] $(echotrace --get-short-usage general 2>/dev/null) $(verbose --get-short-usage general io debug-io 2>/dev/null) [--]" '[SIMPLECOMMAND ...]'
 }
 printUsage()
 {
@@ -40,6 +40,10 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
+HELPTEXT
+    echotrace --get-long-usage general 2>/dev/null
+    verbose --get-long-usage general io debug-io 2>/dev/null
+    cat <<HELPTEXT
 SEE ALSO:
 - echotrace is used for the sole execution trace.
 - verbose is used for the execution and execution trace.
