@@ -8,7 +8,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+[env DEBUG[CUSTOM]_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "[-I|--invert-match] [--for DEBUGGEE] [-m|--module MODULE] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGCUSTOM_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env DEBUG[CUSTOM]_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "[-I|--invert-match] [--for DEBUGGEE] [-m|--module MODULE] [--to FILE] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGCUSTOM_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -40,6 +40,8 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
+    --to FILE		Use FILE instead of the default debug file
+			DEBUGGEE.log (unless overridden).
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
 HELPTEXT
@@ -57,6 +59,7 @@ do
 			shift; isInvertMatch=t;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
+	--to)		shift; DEBUGCUSTOM_SINK="${1:?}"; shift;;
 
 	--command|-c)	shift; commands+="${commands:+ $DEBUGCUSTOM_COMMAND_JOINER }$1"; shift;;
 	--exec)		shift
