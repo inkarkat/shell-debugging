@@ -43,12 +43,9 @@ HELPDESCRIPTION
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
-			enabled, and also debug into DEBUGGEE.log (unless
-			overridden) instead of DEBUGGEE-MODULE.log, which would
-			be the destination when passing --for DEBUGGEE:MODULE
-			instead.
+			enabled.
     --to FILE		Use FILE instead of the default debug file
-			DEBUGGEE[-MODULE].log (unless overridden).
+			DEBUGGEE.log (unless overridden).
 SEE ALSO:
 - dump-files [--on-debug] prints file contents, not pipelined standard input to
   a debug file.
