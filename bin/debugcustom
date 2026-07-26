@@ -8,7 +8,10 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+[env DEBUG[CUSTOM]_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "[-I|--invert-match] [--for DEBUGGEE] [-m|--module MODULE] [--to FILE] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGCUSTOM_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: [DEBUG[CUSTOM]_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-?|-h|--help] ..."
+    echo
+    printf 'Usage: ${DEBUG:+[env DEBUG[CUSTOM]_SINK=FILESPEC|&N] %q %s}\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGCUSTOM_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...]"
+    printf 'Usage: ${DEBUG:+%q %s --} %s\n' "$(basename "$1")" '-I|--invert-match ...' 'SIMPLECOMMAND [...]'
 }
 printUsage()
 {
