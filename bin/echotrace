@@ -83,10 +83,6 @@ HELPDESCRIPTION
     printShortUsage "$1"
     echo
     getLongUsage ''
-    cat <<HELPTEXT
-SEE ALSO:
-- inboxtrace duplicates to the inbox location instead of standard error.
-HELPTEXT
 }
 
 printer()
