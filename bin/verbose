@@ -149,18 +149,8 @@ EXIT STATUS:
 HELPTEXT
 }
 
-printer()
-{
-    PRETTYPRINTQUOTEDARGS_IFS="$VERBOSE_IFS" \
-    PRETTYPRINTQUOTEDARGS_PREFIX="$printerPrefix" \
-	prettyPrintQuotedArgs -- "$@" >&3
-}
-executor()
-{
-    $EXEC "$@"
-}
-
 EXEC=exec
+isEval=
 typeset -a logFileDescriptors=()
 stdinModule=
 stdinModuleEnabler=
@@ -221,20 +211,7 @@ do
 	--stdin-module)	shift; stdinModule="${1:?}"; shift; stdinModuleEnabler+=t; parameter debug-io;;
 	--stdout-module) shift; stdoutModule="${1:?}"; shift; stdoutModuleEnabler+=t; parameter debug-io;;
 	--stderr-module) shift; stderrModule="${1:?}"; shift; stderrModuleEnabler+=t; parameter debug-io;;
-	--eval)		shift
-			if [ "$1" = eval ]; then
-			    shift
-			    printer()
-			    {
-				joinBy >&3 --prefix "${printerPrefix}" -- "$VERBOSE_IFS" "$@"
-			    }
-			    executor()
-			    {
-				eval "$@"
-			    }
-			fi
-			option general
-			;;
+	--eval)		shift; isEval=t; option general;;
 	--)		endOfOptionsAndParameters; shift; break;;
 	-*)		noUnderstand; { echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		endOfOptionsAndParameters; break;;
@@ -250,6 +227,29 @@ if [ "$isOnDebug" ]; then
     [ -n "$stdinModule" ] && unset 'logFileDescriptors[0]'
     [ -n "$stdoutModule" ] && unset 'logFileDescriptors[1]'
     [ -n "$stderrModule" ] && unset 'logFileDescriptors[2]'
+fi
+
+printer()
+{
+    PRETTYPRINTQUOTEDARGS_IFS="$VERBOSE_IFS" \
+    PRETTYPRINTQUOTEDARGS_PREFIX="$printerPrefix" \
+	prettyPrintQuotedArgs -- "$@" >&3
+}
+executor()
+{
+    [ "$1" = eval ] && EXEC=''
+    $EXEC "$@"
+}
+if [ "$isEval" ] && [ "$1" = eval ]; then
+    shift
+    printer()
+    {
+	joinBy >&3 --prefix "${printerPrefix}" -- "$VERBOSE_IFS" "$@"
+    }
+    executor()
+    {
+	eval "$@"
+    }
 fi
 
 logWithPrefix()

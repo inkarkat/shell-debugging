@@ -85,20 +85,9 @@ HELPDESCRIPTION
     getLongUsage ''
 }
 
-printer()
-{
-    PRETTYPRINTQUOTEDARGS_IFS="$ECHOTRACE_IFS" \
-    PRETTYPRINTQUOTEDARGS_PREFIX="$printerPrefix" \
-	exec prettyPrintQuotedArgs -- "$@" >&3
-}
-executor()
-{
-    [ "$1" = eval ] && EXEC=''
-    $EXEC "$@"
-}
-
 debuggee="$DEBUG_DEBUGGEE"
 module=
+isEval=
 option() { :; }
 parameter() { :; }
 parameterToSep() { :; }
@@ -135,26 +124,36 @@ do
 
 	--for)		shift; debuggee="${1?}"; shift; parameter debug;;
 	--module|-m)	shift; module="${1:?}"; shift; parameter debug;;
-	--eval)		shift
-			if [ "$1" = eval ]; then
-			    shift
-			    executor()
-			    {
-				eval "$@"
-			    }
-			    printer()
-			    {
-				joinBy >&3 --prefix "${printerPrefix}" -- "$ECHOTRACE_IFS" "$@"
-			    }
-			fi
-			option general
-			;;
+	--eval)		shift; isEval=t; option general;;
 	--)		endOfOptionsAndParameters; shift; break;;
 	-*)		noUnderstand; { echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		endOfOptionsAndParameters; break;;
     esac
 done
 [ $# -eq 0 ] && exit
+
+printer()
+{
+    PRETTYPRINTQUOTEDARGS_IFS="$ECHOTRACE_IFS" \
+    PRETTYPRINTQUOTEDARGS_PREFIX="$printerPrefix" \
+	exec prettyPrintQuotedArgs -- "$@" >&3
+}
+executor()
+{
+    [ "$1" = eval ] && EXEC=''
+    $EXEC "$@"
+}
+if [ "$isEval" ] && [ "$1" = eval ]; then
+    shift
+    executor()
+    {
+	eval "$@"
+    }
+    printer()
+    {
+	joinBy >&3 --prefix "${printerPrefix}" -- "$ECHOTRACE_IFS" "$@"
+    }
+fi
 
 timestampPrefix=
 if [ -z "$debuggee" ]; then
