@@ -1,0 +1,109 @@
+#!/bin/bash
+shopt -qs extglob
+
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, they can
+    # skim the long one.
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[-I|--invert-match] [--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [--get-sink] [--] [IGNORED-ARG ...] [-?|-h|--help]'
+    echo
+    printf 'Usage: [ -n "$DEBUG" ] && debugSink="$(%q %s)" && SCRIPT-FUNCTION > $debugSink\n' "$(basename "$1")" '... --get-sink'
+    printf 'Usage: ! ${DEBUG:+%q %s} ${DEBUG:-:} || NDEBUG-COMMAND\n' "$(basename "$1")" '--invert-match ... --'
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Check whether debugging is enabled for the caller.
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --invert-match|-I	Succeed if debugging is NOT enabled for the caller.
+    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
+			parent process.
+    --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
+			enabled.
+    --to FILE		Use FILE instead of the default debug file
+			DEBUGGEE.log (unless overridden).
+    --get-sink		Print the sink filespec where debug output is written
+			to.
+SEE ALSO:
+- debugcustom can directly execute COMMAND(s) if debugging is enabled for the
+  caller, and will log them. Prefer if COMMAND(s) can be invoked by an external
+  script; use debugenabled only if the COMMAND(s) are script-local.
+
+EXIT STATUS:
+    0	Debugging is enabled for the caller.
+    1	Debugging is not enabled for the caller.
+HELPTEXT
+}
+
+debuggee="$DEBUG_DEBUGGEE"
+enabledStatus=0
+disabledStatus=1
+module=
+action=
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--invert-match|-I)
+			shift; enabledStatus=1; disabledStatus=0;;
+	--for)		shift; debuggee="${1?}"; shift;;
+	--module|-m)	shift; module="${1:?}"; shift;;
+	--to)		shift; DEBUGENABLED_SINK="${1:?}"; shift;;
+	--get-sink)	shift; action=printSink;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
+
+[ -n "$DEBUG" ] || exit $disabledStatus
+
+printSink()
+{
+    sink="${DEBUGENABLED_SINK:-$DEBUG_SINK}"
+    case "$sink" in
+	'')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
+	\&+([0-9]))	sink="/dev/fd/${sink#\&}";;
+	?*)		;;
+    esac
+    printf '%s\n' "$sink"
+}
+
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
+if [ -z "$debuggee" ]; then
+    {
+	IFS= read -r -d '' debugCmd
+	IFS= read -r -d '' debugSecond
+    } < /proc/${PPID}/cmdline
+    debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
+fi
+
+case ",${DEBUG:-}," in
+    *,${debuggee}${module:+:}${module},*)
+	case ",${DEBUG:-}," in
+	    *,@(debug|${scriptName})=*,*) DEBUGENABLED_SINK=",${DEBUG},"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK#*,@(debug|${scriptName})=}"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK%%,*}"
+			    ;;
+	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+	esac
+
+	$action
+	exit $enabledStatus
+	;;
+    *,@(debug|${scriptName}),*)
+	{ printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	;;
+esac
+exit $disabledStatus
