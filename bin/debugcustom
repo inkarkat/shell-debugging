@@ -123,7 +123,9 @@ case ",${DEBUG:-}," in
 	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
-	if [ ! "$isInvertMatch" ]; then
+	if [ "$isInvertMatch" ]; then
+	    exit 0
+	else
 	    sink="${DEBUGCUSTOM_SINK:-$DEBUG_SINK}"
 	    case "$sink" in
 		'')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
