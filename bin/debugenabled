@@ -5,8 +5,9 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [--get-sink] [-?|-h|--help]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[-I|--invert-match] [--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [--get-sink] [-?|-h|--help]'
     printf 'Usage: [ -n "$DEBUG" ] && debugSink="$(%q %s)" && SCRIPT-FUNCTION > $debugSink\n' "$(basename "$1")" '... --get-sink'
+    printf 'Usage: ! ${DEBUG:+%q %s} ${DEBUG:-:} || NDEBUG-COMMAND\n' "$(basename "$1")" '--invert-match ... --'
 }
 printUsage()
 {
@@ -26,6 +27,7 @@ HELPDESCRIPTION
     printShortUsage "$1"
     echo
     cat <<HELPTEXT
+    --invert-match|-I	Succeed if debugging is NOT enabled for the caller.
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
@@ -46,12 +48,16 @@ HELPTEXT
 }
 
 debuggee="$DEBUG_DEBUGGEE"
+enabledStatus=0
+disabledStatus=1
 module=
 action=
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--invert-match|-I)
+			shift; enabledStatus=1; disabledStatus=0;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
 	--to)		shift; DEBUGENABLED_SINK="${1:?}"; shift;;
@@ -62,7 +68,7 @@ do
     esac
 done
 
-[ -n "$DEBUG" ] || exit 1
+[ -n "$DEBUG" ] || exit $disabledStatus
 
 printSink()
 {
@@ -93,10 +99,10 @@ case ",${DEBUG:-}," in
 	esac
 
 	$action
-	exit 0
+	exit $enabledStatus
 	;;
     *,@(debug|${scriptName}),*)
 	{ printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
 	;;
 esac
-exit 1
+exit $disabledStatus
