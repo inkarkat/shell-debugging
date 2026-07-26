@@ -6,6 +6,7 @@ printShortUsage()
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
     printf 'Usage: ${DEBUG:+[env DEBUGCOMMAND_IFS=STRING|newline [DEBUG[COMMAND]_SINK=FILESPEC|&N]] %q %s} %s\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] $(echotrace --get-short-usage general 2>/dev/null) $(verbose --get-short-usage general io debug-io 2>/dev/null) [--]" '[SIMPLECOMMAND ...]'
+    printf 'Usage: ${DEBUG:+%q %s} %s\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] $(echotrace --get-short-usage general 2>/dev/null) $(verbose --get-short-usage general io debug-io 2>/dev/null) --eval [--]" 'eval [SIMPLECOMMAND ...]'
 }
 printUsage()
 {
@@ -58,6 +59,7 @@ HELPTEXT
 
 debuggee="$DEBUG_DEBUGGEE"
 module=
+isEval=
 typeset -a echotraceArgs=()
 typeset -a verboseArgs=()
 while [ $# -ne 0 ]
@@ -66,6 +68,7 @@ do
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
+	--eval)		echotraceArgs+=("$1"); verboseArgs+=("$1"); shift; isEval=t;;
 	--)		shift; break;;
 	-*)		if argCount=$(echotrace --understand-for general --understands "$@"); then
 			    while ((argCount-- > 0))
@@ -88,7 +91,22 @@ do
 	*)		break;;
     esac
 done
-[ -n "$DEBUG" ] || exec "$@"
+executor()
+{
+    [ "$1" = eval ] && EXEC=''
+    $EXEC "$@"
+}
+if [ "$isEval" ] && [ "$1" = eval ]; then
+    executor()
+    {
+	shift
+	eval "$@"
+    }
+fi
+if [ -z "$DEBUG" ]; then
+    executor "$@"
+    exit $?
+fi
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
@@ -132,4 +150,4 @@ case ",${DEBUG:-}," in
 	exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
 	;;
 esac
-exec "$@"
+executor "$@"
