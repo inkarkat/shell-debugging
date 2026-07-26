@@ -42,6 +42,10 @@ HELPDESCRIPTION
 			enabled.
     --to FILE		Use FILE instead of the default debug file
 			DEBUGGEE.log (unless overridden).
+SEE ALSO:
+- debugcommand is a wrapper for COMMAND(s) that should always be executed, and
+  will log to a debug file if debugging is enabled for the caller.
+
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
 HELPTEXT

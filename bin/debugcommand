@@ -47,6 +47,8 @@ HELPTEXT
 SEE ALSO:
 - echotrace is used for the sole execution trace.
 - verbose is used for the execution and execution trace.
+- debugcustom only executes COMMAND(s) if debugging is enabled for the caller,
+  but normally skips execution altogether.
 
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
