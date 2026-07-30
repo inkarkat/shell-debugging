@@ -156,9 +156,9 @@ if [ "$isOnDebug" ]; then
 	debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
     fi
 
-    case ",${DEBUG:-}," in
+    case ",${DEBUG}," in
 	*,${debuggee}${module:+:}${module},*)
-	    case ",${DEBUG:-}," in
+	    case ",${DEBUG}," in
 		*,@(debug|${scriptName})=*,*)
 		    DUMPARGS_SINK=",${DEBUG},"; DUMPARGS_SINK="${DUMPARGS_SINK#*,@(debug|${scriptName})=}"; DUMPARGS_SINK="${DUMPARGS_SINK%%,*}"
 		    ;;

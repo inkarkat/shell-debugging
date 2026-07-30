@@ -114,7 +114,7 @@ fi
 
 setSinkAndExecute()
 {
-    case ",${DEBUG:-}," in
+    case ",${DEBUG}," in
 	*,@(debug|${scriptName})=*,*)
 	    DEBUGCOMMAND_SINK=",${DEBUG},"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK#*,@(debug|${scriptName})=}"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK%%,*}"
 	    ;;
@@ -142,7 +142,7 @@ fi
 
 typeset -a debugCommand=(verbose "${verboseArgs[@]}" --on-debug)
 typeset -a debugCommandArgs=(--for "$debuggee" ${module:+--module "$module"})
-case ",${DEBUG:-}," in
+case ",${DEBUG}," in
     *,${debuggee}!${module:+:}${module},*)
 	debugCommand=(echotrace "${echotraceArgs[@]}")
 	debugCommandArgs=(--for "${debuggee}!" ${module:+--module "$module"})

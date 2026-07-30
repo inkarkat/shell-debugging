@@ -327,7 +327,7 @@ executeAndCapture012()
 
 setSinkDefaults()
 {
-    case ",${DEBUG:-}," in
+    case ",${DEBUG}," in
 	*,@(debug|${scriptName})=*,*)
 	    VERBOSE_SINK=",${DEBUG},"; VERBOSE_SINK="${VERBOSE_SINK#*,@(debug|${scriptName})=}"; VERBOSE_SINK="${VERBOSE_SINK%%,*}"
 	    ;;
@@ -352,7 +352,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 	debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
     fi
 
-    case ",${DEBUG:-}," in
+    case ",${DEBUG}," in
 	*,${debuggee}${module:+:}${module},*)
 	    setSinkDefaults
 	    isActive=t
@@ -365,7 +365,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
     esac
 
     [ -n "$stdinModule" ] \
-	&& case ",${DEBUG:-}," in
+	&& case ",${DEBUG}," in
 	    *,${debuggee}:${stdinModule},*)
 		logFileDescriptors[0]+=$stdinModuleEnabler
 		setSinkDefaults
@@ -377,7 +377,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 	esac
 
     [ -n "$stdoutModule" ] \
-	&& case ",${DEBUG:-}," in
+	&& case ",${DEBUG}," in
 	    *,${debuggee}:${stdoutModule},*)
 		logFileDescriptors[1]+=$stdoutModuleEnabler
 		setSinkDefaults
@@ -389,7 +389,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 	esac
 
     [ -n "$stderrModule" ] \
-	&& case ",${DEBUG:-}," in
+	&& case ",${DEBUG}," in
 	    *,${debuggee}:${stderrModule},*)
 		logFileDescriptors[2]+=$stderrModuleEnabler
 		setSinkDefaults

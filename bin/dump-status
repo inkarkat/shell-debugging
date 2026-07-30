@@ -88,9 +88,9 @@ if [ "$isOnDebug" ]; then
 	debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
     fi
 
-    case ",${DEBUG:-}," in
+    case ",${DEBUG}," in
 	*,${debuggee}${module:+:}${module},*)
-	    case ",${DEBUG:-}," in
+	    case ",${DEBUG}," in
 		*,@(debug|${scriptName})=*,*)
 		    DUMPSTATUS_SINK=",${DEBUG},"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK#*,@(debug|${scriptName})=}"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK%%,*}"
 		    ;;

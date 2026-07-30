@@ -155,7 +155,7 @@ if [ -z "$debuggee" ]; then
     debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
 fi
 
-case ",${DEBUG:-}," in
+case ",${DEBUG}," in
     *,@(debug|${scriptName})=*,*) DEBUGEVAL_SINK=",${DEBUG},"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK#*,@(debug|${scriptName})=}"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK%%,*}"
 	;;
     *)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
@@ -172,7 +172,7 @@ esac
 
 isActive=
 action=
-case ",${DEBUG:-}," in
+case ",${DEBUG}," in
     *,${debuggee}\?*([^:,])${module:+:}${module},*)
 	predicate=",${DEBUG},"; predicate="${predicate#*,${debuggee}?}"; predicate="${predicate%%${module:+:}${module},*}"
 	if [ -z "$predicate" ]; then
@@ -186,7 +186,7 @@ case ",${DEBUG:-}," in
 	fi
 	;;
 esac
-case ",${DEBUG:-}," in
+case ",${DEBUG}," in
     *,${debuggee}!${module:+:}${module},*)
 	isActive=t
 	export PS4='! '
@@ -225,7 +225,7 @@ esac
 # not disabled by the ! case).
 if [ -z "$action" ]; then
     # Need to do the replacement before any embellishments.
-    case ",${DEBUG:-}," in
+    case ",${DEBUG}," in
 	*,${debuggee}=*([^:,])${module:+:}${module},*)
 	    isActive=t
 	    commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
@@ -233,7 +233,7 @@ if [ -z "$action" ]; then
 	    [ -z "$commands" ] && printfToTerm '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
-    case ",${DEBUG:-}," in
+    case ",${DEBUG}," in
 	*,${debuggee}^=*([^:,])${module:+:}${module},*)
 	    isActive=t
 	    prefix=",${DEBUG},"; prefix="${prefix#*,${debuggee}^=}"; prefix="${prefix%%${module:+:}${module},*}"
@@ -241,7 +241,7 @@ if [ -z "$action" ]; then
 	    [ -z "$prefix" ] && printfToTerm '%s: Warning: Empty PREFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
-    case ",${DEBUG:-}," in
+    case ",${DEBUG}," in
 	*,${debuggee}+=*([^:,])${module:+:}${module},*)
 	    isActive=t
 	    suffix=",${DEBUG},"; suffix="${suffix#*,${debuggee}+=}"; suffix="${suffix%%${module:+:}${module},*}"
@@ -255,7 +255,7 @@ if [ "$isActive" ]; then
     eval "$sinkRedir"
     ${action:-passthroughAndLogCommands}
 else
-    case ",${DEBUG:-}," in
+    case ",${DEBUG}," in
 	*,@(debug|${scriptName}),*)
 	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
