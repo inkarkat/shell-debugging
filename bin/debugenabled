@@ -41,6 +41,8 @@ SEE ALSO:
 - debugcustom can directly execute COMMAND(s) if debugging is enabled for the
   caller, and will log them. Prefer if COMMAND(s) can be invoked by an external
   script; use debugenabled only if the COMMAND(s) are script-local.
+- debugeval can also execute script-local COMMAND(s) (through eval) and
+  additionally allows replacing and embellishing the COMMAND(s) to be executed.
 
 EXIT STATUS:
     0	Debugging is enabled for the caller.
