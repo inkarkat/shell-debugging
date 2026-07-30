@@ -33,6 +33,10 @@ trace.
 When \$DEBUG refers to DEBUGGEE=OTHER-COMMAND, OTHER-COMMAND instead of COMMAND
 is printed for execution by the invoking eval and additionally written as an
 execution trace.
+When \$DEBUG refers to DEBUGGEE^=PREFIX, PREFIX is put before COMMAND for
+execution by the invoking eval and additionally written as an execution trace.
+When \$DEBUG refers to DEBUGGEE+=SUFFIX, SUFFIX is put after COMMAND for
+execution by the invoking eval and additionally written as an execution trace.
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 With "DEBUG=debug[eval]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
@@ -171,6 +175,18 @@ case ",${DEBUG:-}," in
     *,${debuggee}=+([^:,])${module:+:}${module},*)
 	setSinkDefaults
 	commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
+	action=passthroughAndLogCommands
+	;;
+    *,${debuggee}^=+([^:,])${module:+:}${module},*)
+	setSinkDefaults
+	prefix=",${DEBUG},"; prefix="${prefix#*,${debuggee}^=}"; prefix="${prefix%%${module:+:}${module},*}"
+	commands="${prefix}${commands}"
+	action=passthroughAndLogCommands
+	;;
+    *,${debuggee}+=+([^:,])${module:+:}${module},*)
+	setSinkDefaults
+	suffix=",${DEBUG},"; suffix="${suffix#*,${debuggee}+=}"; suffix="${suffix%%${module:+:}${module},*}"
+	commands+="$suffix"
 	action=passthroughAndLogCommands
 	;;
     *,${debuggee}${module:+:}${module},*)
