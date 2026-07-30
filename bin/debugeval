@@ -204,6 +204,7 @@ if [ -z "$action" ]; then
 	*,${debuggee}=*([^:,])${module:+:}${module},*)
 	    isActive=t
 	    commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
+	    export PS4='= '
 	    [ -z "$commands" ] && printfToTerm '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
