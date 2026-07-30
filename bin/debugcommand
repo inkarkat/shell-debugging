@@ -69,23 +69,25 @@ do
 	--module|-m)	shift; module="${1:?}"; shift;;
 	--eval)		echotraceArgs+=("$1"); verboseArgs+=("$1"); shift; isEval=t;;
 	--)		shift; break;;
-	-*)		if argCount=$(echotrace --understand-for general --understands "$@"); then
-			    while ((argCount-- > 0))
-			    do
-				echotraceArgs+=("$1"); shift
-			    done
+	-*)		let understoodArgCount=0
+			if argCount=$(echotrace --understand-for general --understands "$@"); then
+			    understoodArgCount=$argCount
+			    echotraceArgs+=("${@:1:argCount}")
 			elif [ $? -eq 2 ]; then
 			    exit 2
-			elif argCount=$(verbose --understand-for general --understand-for io --understand-for debug-io --understands "$@"); then
-			    while ((argCount-- > 0))
-			    do
-				verboseArgs+=("$1"); shift
-			    done
-			elif [ $? -eq 2 ]; then
-			    exit 2
-			else
-			    { echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2
 			fi
+			if argCount=$(verbose --understand-for general --understand-for io --understand-for debug-io --understands "$@"); then
+			    understoodArgCount=$argCount
+			    verboseArgs+=("${@:1:argCount}")
+			elif [ $? -eq 2 ]; then
+			    exit 2
+			fi
+			if [ $understoodArgCount -gt 0 ]; then
+			    shift $understoodArgCount
+			else
+			    echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"
+			    exit 2
+			fi >&2
 			;;
 	*)		break;;
     esac
