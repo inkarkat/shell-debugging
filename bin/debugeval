@@ -37,6 +37,10 @@ When \$DEBUG refers to DEBUGGEE^=PREFIX, PREFIX is put before COMMAND for
 execution by the invoking eval and additionally written as an execution trace.
 When \$DEBUG refers to DEBUGGEE+=SUFFIX, SUFFIX is put after COMMAND for
 execution by the invoking eval and additionally written as an execution trace.
+When \$DEBUG refers to DEBUGGEE?PREDICATE, COMMAND is printed for execution by
+the invoking eval (or not printed / replaced / embellished according to any
+other instructions) and only also written as an execution trace if PREDICATE is
+successful.
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 With "DEBUG=debug[eval]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
@@ -158,6 +162,17 @@ esac
 
 isActive=
 action=
+case ",${DEBUG:-}," in
+    *,${debuggee}\?+([^:,])${module:+:}${module},*)
+	predicate=",${DEBUG},"; predicate="${predicate#*,${debuggee}?}"; predicate="${predicate%%${module:+:}${module},*}"
+	if eval "$predicate"; then
+	    isActive=t
+	else
+	    passthroughCommands
+	    exit 0
+	fi
+	;;
+esac
 case ",${DEBUG:-}," in
     *,${debuggee}!${module:+:}${module},*)
 	isActive=t
