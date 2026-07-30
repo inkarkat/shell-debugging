@@ -122,6 +122,11 @@ if [ -z "$DEBUG" ]; then
     exit 0
 fi
 
+printfToTerm()
+{
+    { printf >/dev/tty "$@"; } 2>/dev/null
+}
+
 logCommands()
 {
     local timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
@@ -219,7 +224,7 @@ if [ "$isActive" ]; then
 else
     case ",${DEBUG:-}," in
 	*,@(debug|${scriptName}),*)
-	    { printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
 
