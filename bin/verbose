@@ -265,7 +265,7 @@ logWithPrefix()
     do
 	printf '%s%s\n' "$prefix" "$line" >&3
 	printf "%s%s${isEOL:+\\n}" "$line"
-    done \
+    done
 }
 
 executeAndCapture0()
@@ -359,7 +359,8 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 	    EXEC=''
 	    ;;
 	*,@(debug|${scriptName}),*)
-	    printfToTerm '%s: Will log command with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    logFileDescriptorWhat=; logFileDescriptorWhat="${!logFileDescriptors[*]}"
+	    printfToTerm '%s: Will log command%s with DEBUG=%q\n' "$scriptName" "${logFileDescriptorWhat:+ and file descriptor(s) }${logFileDescriptorWhat}" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
 
