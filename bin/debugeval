@@ -33,6 +33,10 @@ trace.
 When \$DEBUG refers to DEBUGGEE=OTHER-COMMAND, OTHER-COMMAND instead of COMMAND
 is printed for execution by the invoking eval and additionally written as an
 execution trace.
+When \$DEBUG refers to DEBUGGEE@[N-]FILE, the execution uses the contents of
+FILE (and an exit status of N) as the output of the skipped COMMAND execution.
+This allows the injection of canned output (and exit status) for testing
+purposes.
 When \$DEBUG refers to DEBUGGEE^=PREFIX, PREFIX is put before COMMAND for
 execution by the invoking eval and additionally written as an execution trace.
 When \$DEBUG refers to DEBUGGEE+=SUFFIX, SUFFIX is put after COMMAND for
@@ -41,6 +45,7 @@ When \$DEBUG refers to DEBUGGEE?PREDICATE, COMMAND is printed for execution by
 the invoking eval (or not printed / replaced / embellished according to any
 other instructions) and only also written as an execution trace if PREDICATE is
 successful.
+
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 With "DEBUG=debug[eval]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
@@ -194,6 +199,26 @@ case ",${DEBUG:-}," in
 	;;
     *,${debuggee}${module:+:}${module},*)
 	isActive=t
+	;;
+    *,${debuggee}@*([^:,])${module:+:}${module},*)
+	isActive=t
+	filespec=",${DEBUG},"; filespec="${filespec#*,${debuggee}@}"; filespec="${filespec%%${module:+:}${module},*}"
+	eval "filespec=$filespec" # Expand environment variables and tilde.
+	if [ -n "$filespec" ]; then
+	    exitStatus=
+	    if [[ "$filespec" =~ ^(.*/)?([0-9]+)-(.+)$ ]]; then
+		exitStatus="${BASH_REMATCH[2]}"
+		filespec="${BASH_REMATCH[1]}${BASH_REMATCH[3]}"
+	    fi
+	    if [ -e "$filespec" ]; then
+		printf -v commands 'cat %q%s' "$filespec" "${exitStatus:+; exit $exitStatus}"
+		export PS4='@ '
+	    else
+		printfToTerm '%s: Warning: Non-existing FILE given for %q; ignoring: %s\n' "$scriptName" "${debuggee}${module:+:}${module}" "$filespec"
+	    fi
+	else
+	    printfToTerm '%s: Warning: No FILE given for %q; ignoring.\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	fi
 	;;
 esac
 # We can only embellish / replace the COMMAND if it's still to be executed (i.e.
