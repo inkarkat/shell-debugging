@@ -158,7 +158,7 @@ fi
 case ",${DEBUG}," in
     *,@(debug|${scriptName})=*,*) DEBUGEVAL_SINK=",${DEBUG},"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK#*,@(debug|${scriptName})=}"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK%%,*}"
 	;;
-    *)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+    *)  : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
 esac
 
 sink="${DEBUGEVAL_SINK-$DEBUG_SINK}"

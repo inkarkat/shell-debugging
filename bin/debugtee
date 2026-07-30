@@ -115,12 +115,12 @@ case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) filespec=",${DEBUG},"; filespec="${filespec#*,@(debug|${scriptName})=}"; filespec="${filespec%%,*}"
 			    DEBUGTEE_SINK="$(realpath --no-symlinks -- "$filespec")" || DEBUGTEE_SINK="$filespec"
 			    ;;
-	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
 	sink="${DEBUGTEE_SINK-$DEBUG_SINK}"
 	case "$sink" in
-	    '')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
+	    '')		sink=/dev/stderr;;
 	    \&+([0-9]))	sink="/dev/fd/${sink#\&}";;
 	    ?*)		trap finally EXIT;;
 	esac

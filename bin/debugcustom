@@ -126,7 +126,7 @@ case ",${DEBUG}," in
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGCUSTOM_SINK=",${DEBUG},"; DEBUGCUSTOM_SINK="${DEBUGCUSTOM_SINK#*,@(debug|${scriptName})=}"; DEBUGCUSTOM_SINK="${DEBUGCUSTOM_SINK%%,*}"
 			    ;;
-	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
 	if [ "$isInvertMatch" ]; then
@@ -134,7 +134,7 @@ case ",${DEBUG}," in
 	else
 	    sink="${DEBUGCUSTOM_SINK-$DEBUG_SINK}"
 	    case "$sink" in
-		'')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
+		'')		exec >&2;;
 		\&+([0-9]))	eval "exec >$sink";;
 		?*)		exec >>"$sink";;
 	    esac

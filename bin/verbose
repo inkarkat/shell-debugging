@@ -331,7 +331,7 @@ setSinkDefaults()
 	*,@(debug|${scriptName})=*,*)
 	    VERBOSE_SINK=",${DEBUG},"; VERBOSE_SINK="${VERBOSE_SINK#*,@(debug|${scriptName})=}"; VERBOSE_SINK="${VERBOSE_SINK%%,*}"
 	    ;;
-	*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+	*)  : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
     esac
 
     timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
@@ -401,7 +401,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 	esac
 fi
 
-sink="${VERBOSE_SINK:-${isOnDebug:+$DEBUG_SINK}}"
+sink="${VERBOSE_SINK-${isOnDebug:+$DEBUG_SINK}}"
 if [ "$isActive" -o ${#logFileDescriptors[@]} -gt 0 ]; then
     case "$sink" in
 	'')		exec 3>&2;;

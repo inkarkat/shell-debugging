@@ -124,7 +124,7 @@ setSinkAndExecute()
 	export VERBOSE_IFS="$DEBUGCOMMAND_IFS"
 	export ECHOTRACE_IFS="$DEBUGCOMMAND_IFS"
     fi
-    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"}
+    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"}
     export VERBOSE_SINK="${DEBUGCOMMAND_SINK-$DEBUG_SINK}"
     export ECHOTRACE_SINK="${DEBUGCOMMAND_SINK-$DEBUG_SINK}"
 

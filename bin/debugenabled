@@ -77,7 +77,7 @@ printSink()
 {
     sink="${DEBUGENABLED_SINK-$DEBUG_SINK}"
     case "$sink" in
-	'')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
+	'')		sink=/dev/stderr;;
 	\&+([0-9]))	sink="/dev/fd/${sink#\&}";;
 	?*)		;;
     esac
@@ -98,7 +98,7 @@ case ",${DEBUG}," in
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGENABLED_SINK=",${DEBUG},"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK#*,@(debug|${scriptName})=}"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK%%,*}"
 			    ;;
-	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
 	$action
