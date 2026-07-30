@@ -139,7 +139,7 @@ case ",${DEBUG}," in
 		?*)		exec >>"$sink";;
 	    esac
 
-	    eval "$commands"
+	    eval "$commands" >&2
 	    exit $?
 	fi
 	;;
