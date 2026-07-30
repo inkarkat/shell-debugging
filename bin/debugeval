@@ -165,7 +165,7 @@ action=
 case ",${DEBUG:-}," in
     *,${debuggee}\?+([^:,])${module:+:}${module},*)
 	predicate=",${DEBUG},"; predicate="${predicate#*,${debuggee}?}"; predicate="${predicate%%${module:+:}${module},*}"
-	if eval "$predicate"; then
+	if eval "(${sinkRedir}; { ${predicate}; } >&3 2>&3)"; then
 	    isActive=t
 	else
 	    passthroughCommands
