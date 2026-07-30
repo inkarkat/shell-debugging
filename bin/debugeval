@@ -168,9 +168,12 @@ esac
 isActive=
 action=
 case ",${DEBUG:-}," in
-    *,${debuggee}\?+([^:,])${module:+:}${module},*)
+    *,${debuggee}\?*([^:,])${module:+:}${module},*)
 	predicate=",${DEBUG},"; predicate="${predicate#*,${debuggee}?}"; predicate="${predicate%%${module:+:}${module},*}"
-	if eval "(${sinkRedir}; { ${predicate}; } >&3 2>&3)"; then
+	if [ -z "$predicate" ]; then
+	    isActive=t
+	    printfToTerm '%s: Warning: Empty PREDICATE given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	elif eval "(${sinkRedir}; { ${predicate}; } >&3 2>&3)"; then
 	    isActive=t
 	else
 	    passthroughCommands
@@ -197,23 +200,26 @@ esac
 if [ -z "$action" ]; then
     # Need to do the replacement before any embellishments.
     case ",${DEBUG:-}," in
-	*,${debuggee}=+([^:,])${module:+:}${module},*)
+	*,${debuggee}=*([^:,])${module:+:}${module},*)
 	    isActive=t
 	    commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
+	    [ -z "$commands" ] && printfToTerm '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
     case ",${DEBUG:-}," in
-	*,${debuggee}^=+([^:,])${module:+:}${module},*)
+	*,${debuggee}^=*([^:,])${module:+:}${module},*)
 	    isActive=t
 	    prefix=",${DEBUG},"; prefix="${prefix#*,${debuggee}^=}"; prefix="${prefix%%${module:+:}${module},*}"
 	    commands="${prefix}${commands}"
+	    [ -z "$prefix" ] && printfToTerm '%s: Warning: Empty PREFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
     case ",${DEBUG:-}," in
-	*,${debuggee}+=+([^:,])${module:+:}${module},*)
+	*,${debuggee}+=*([^:,])${module:+:}${module},*)
 	    isActive=t
 	    suffix=",${DEBUG},"; suffix="${suffix#*,${debuggee}+=}"; suffix="${suffix%%${module:+:}${module},*}"
 	    commands+="$suffix"
+	    [ -z "$suffix" ] && printfToTerm '%s: Warning: Empty SUFFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
 fi
