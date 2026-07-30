@@ -27,6 +27,9 @@ When \$DEBUG refers plainly to the DEBUGGEE, COMMAND is printed for execution by
 the invoking eval and additionally written as an execution trace.
 When \$DEBUG refers to DEBUGGEE!, COMMAND is NOT printed / executed and just
 written as an execution trace.
+When \$DEBUG refers to DEBUGGEE&, COMMAND is printed for execution with tracing
+enabled (set -x) by the invoking eval and additionally written as an execution
+trace.
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 With "DEBUG=debug[eval]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
@@ -96,9 +99,11 @@ if [ -z "$commands" ]; then
     exit 2
 fi >&2
 
+beforeCommands=
+afterCommands=
 passthroughCommands()
 {
-    printf %s "$commands"
+    printf %s%s%s "${beforeCommands}${beforeCommands:+; }" "$commands" "${afterCommands:+; }${afterCommands}"
 }
 
 if [ -z "$DEBUG" ]; then
@@ -106,6 +111,7 @@ if [ -z "$DEBUG" ]; then
     exit 0
 fi
 
+traceRedir=
 setSinkDefaults()
 {
     case ",${DEBUG:-}," in
@@ -113,17 +119,19 @@ setSinkDefaults()
 	    ;;
 	*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
     esac
+
+    local sink="${DEBUGEVAL_SINK-$DEBUG_SINK}"
+    local sinkRedir
+    case "$sink" in
+	'')		sinkRedir='exec 3>&2'; traceRedir='BASH_XTRACEFD=2';;
+	\&+([0-9]))	sinkRedir="exec 3>$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
+	?*)		printf -v sinkRedir 'exec 3>>%q' "$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
+    esac
+    eval "$sinkRedir"
 }
 
 logCommands()
 {
-    local sink="${DEBUGEVAL_SINK:-$DEBUG_SINK}"
-    case "$sink" in
-	'')		exec 3>&2;;
-	\&+([0-9]))	eval "exec 3>$sink";;
-	?*)		exec 3>>"$sink";;
-    esac
-
     local timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
     local nestingPrefix="$(debugNestingPrefix)"
     local printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
@@ -148,12 +156,18 @@ fi
 action=passthroughCommands
 case ",${DEBUG:-}," in
     *,${debuggee}!${module:+:}${module},*)
-	action=logCommands
 	setSinkDefaults
+	action=logCommands
+	;;
+    *,${debuggee}\&${module:+:}${module},*)
+	setSinkDefaults
+	beforeCommands="${traceRedir}; set -x"
+	afterCommands='set +x'
+	action=passthroughAndLogCommands
 	;;
     *,${debuggee}${module:+:}${module},*)
-	action=passthroughAndLogCommands
 	setSinkDefaults
+	action=passthroughAndLogCommands
 	;;
     *,@(debug|${scriptName}),*)
 	{ printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
