@@ -43,8 +43,8 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
-    --to FILE		Use FILE instead of the default debug file
-			DEBUGGEE.log (unless overridden).
+    --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
+			and just leave a reference to FILE there.
 SEE ALSO:
 - debugcommand is a wrapper for COMMAND(s) that should always be executed, and
   will log to a debug file if debugging is enabled for the caller.
@@ -60,6 +60,7 @@ HELPTEXT
 isInvertMatch=
 debuggee="$DEBUG_DEBUGGEE"
 module=
+toFile=
 commands=
 while [ $# -ne 0 ]
 do
@@ -69,7 +70,7 @@ do
 			shift; isInvertMatch=t;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
-	--to)		shift; DEBUGCUSTOM_SINK="${1:?}"; shift;;
+	--to)		shift; toFile="${1:?}"; shift;;
 
 	--command|-c)	shift; commands+="${commands:+ $DEBUGCUSTOM_COMMAND_JOINER }$1"; shift;;
 	--exec)		shift
@@ -139,7 +140,18 @@ case ",${DEBUG}," in
 		?*)		exec >>"$sink";;
 	    esac
 
-	    eval "$commands" >&2
+	    output="$(eval "$commands" 2>&1)"
+
+	    if [ -n "$toFile" ]; then
+		# Log the reference in the debug file.
+		timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
+		printf '%s%s Logged to %s\n' "${timestampPrefix}${timestampPrefix:+ }" "$debuggee (${module}${module:+, }${PPID})" "$toFile"
+
+		# Redirect the captured output to the specified FILE.
+		exec >&- >>"$toFile"
+	    fi
+
+	    printf '%s\n' "$output"
 	    exit $?
 	fi
 	;;

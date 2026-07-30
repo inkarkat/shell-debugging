@@ -61,8 +61,8 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
-    --to FILE		Use FILE instead of the default debug file
-			DEBUGGEE.log (unless overridden).
+    --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
+			and just leave a reference to FILE there.
 SEE ALSO:
 - debugcustom can directly (i.e. without eval) execute COMMAND(s) if debugging
   is enabled for the caller, and will log them. Prefer if COMMAND(s) can be
@@ -81,6 +81,7 @@ assertSingleCommand()
 
 debuggee="$DEBUG_DEBUGGEE"
 module=
+toFile=
 commands=
 while [ $# -ne 0 ]
 do
@@ -88,7 +89,7 @@ do
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
-	--to)		shift; DEBUGEVAL_SINK="${1:?}"; shift;;
+	--to)		shift; toFile="${1:?}"; shift;;
 	--command|-c)	shift
 			assertSingleCommand "$*"
 			[ -n "$DEBUG" -a "$1" = "$DEBUG" ] && shift   # The ${DEBUG:-echo} non-debug fallback.
@@ -169,6 +170,17 @@ case "$sink" in
     \&+([0-9]))	sinkRedir="exec 3>$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
     ?*)		printf -v sinkRedir 'exec 3>>%q' "$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
 esac
+handleToFile()
+{
+    [ -n "$toFile" ] || return 0
+
+    # Log the reference in the debug file.
+    timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
+    (eval "$sinkRedir"; printf >&3 '%s%s Logged to %s\n' "${timestampPrefix}${timestampPrefix:+ }" "$debuggee (${module}${module:+, }${PPID})" "$toFile")
+
+    # Redirect the captured output to the specified FILE.
+    printf -v sinkRedir 'exec 3>>%q' "$toFile"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3"
+}
 
 isActive=
 action=
@@ -194,6 +206,7 @@ case ",${DEBUG}," in
 	;;
     *,${debuggee}\&${module:+:}${module},*)
 	isActive=t
+	handleToFile
 	beforeCommands="${traceRedir}; set -x"
 	afterCommands='set +x'
 	;;
@@ -252,6 +265,7 @@ if [ -z "$action" ]; then
 fi
 
 if [ "$isActive" ]; then
+    handleToFile
     eval "$sinkRedir"
     ${action:-passthroughAndLogCommands}
 else

@@ -44,8 +44,8 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
-    --to FILE		Use FILE instead of the default debug file
-			DEBUGGEE.log (unless overridden).
+    --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
+			and just leave a reference to FILE there.
 SEE ALSO:
 - dump-files [--on-debug] prints file contents, not pipelined standard input to
   a debug file.
@@ -57,6 +57,7 @@ HELPTEXT
 
 debuggee="$DEBUG_DEBUGGEE"
 module=
+toFile=
 isAppend=t
 isHeader=t
 description=
@@ -71,7 +72,7 @@ do
 			shift; description="${1?}"; shift;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
-	--to)		shift; DEBUGTEE_SINK="${1:?}"; shift;;
+	--to)		shift; toFile="${1:?}"; shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -119,6 +120,19 @@ case ",${DEBUG}," in
 	esac
 
 	sink="${DEBUGTEE_SINK-$DEBUG_SINK}"
+	if [ -n "$toFile" ]; then
+	    # Log the reference in the debug file.
+	    timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
+	    printf -v reference '%s%s Logged to %s\n' "${timestampPrefix}${timestampPrefix:+ }" "$debuggee (${module}${module:+, }${PPID})" "$toFile"
+	    case "$sink" in
+		'')		printf '%s\n' "$reference" >&2;;
+		\&+([0-9]))	eval "printf '%s\n' \"\$reference\" >$sink";;
+		?*)		printf '%s\n' "$reference" >>"$sink";;
+	    esac
+
+	    # Redirect the captured output to the specified FILE.
+	    sink="$toFile"
+	fi
 	case "$sink" in
 	    '')		sink=/dev/stderr;;
 	    \&+([0-9]))	sink="/dev/fd/${sink#\&}";;

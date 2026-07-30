@@ -33,8 +33,7 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
-    --to FILE		Use FILE instead of the default debug file
-			DEBUGGEE.log (unless overridden).
+    --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
     --get-sink		Print the sink filespec where debug output is written
 			to.
 SEE ALSO:
@@ -54,6 +53,7 @@ debuggee="$DEBUG_DEBUGGEE"
 enabledStatus=0
 disabledStatus=1
 module=
+unset toFile
 action=
 while [ $# -ne 0 ]
 do
@@ -63,7 +63,7 @@ do
 			shift; enabledStatus=1; disabledStatus=0;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
-	--to)		shift; DEBUGENABLED_SINK="${1:?}"; shift;;
+	--to)		shift; toFile="${1:?}"; shift;;
 	--get-sink)	shift; action=printSink;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
@@ -75,7 +75,7 @@ done
 
 printSink()
 {
-    sink="${DEBUGENABLED_SINK-$DEBUG_SINK}"
+    sink="${toFile-${DEBUGENABLED_SINK-$DEBUG_SINK}}"
     case "$sink" in
 	'')		sink=/dev/stderr;;
 	\&+([0-9]))	sink="/dev/fd/${sink#\&}";;
