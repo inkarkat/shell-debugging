@@ -14,7 +14,7 @@ getShortUsage()
     do
 	local hadTopic=
 	case "$1" in
-	    ''|general) printf %s "${usageSep}${hadTopic:+ }" ''; hadTopic=t;;&
+	    #''|general) printf %s "${usageSep}${hadTopic:+ }" ''; hadTopic=t;;&
 	    ''|eval) printf %s "${usageSep}${hadTopic:+ }" '[--eval]'; hadTopic=t;;&
 	    ''|debug)
 		[ -n "$1" ] \
@@ -34,9 +34,9 @@ getLongUsage()
 	local topic="$1"; shift
 	local hadTopic=
 	case "$topic" in
-	    ''|general)
-		hadTopic=t
-		;;&
+	    # ''|general)
+	    #     hadTopic=t
+	    #     ;;&
 	    ''|eval)
 		cat <<HELPTEXT
     --eval		Print the evaluation result instead of the (quoted)
@@ -61,9 +61,9 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$(getShortUsage general eval) [--] COMMAND [...] [-?|-h|--help]"
-    printf 'Usage: ${DEBUG:+[env ECHOTRACE_IFS=STRING|newline] [(ECHOTRACE|DEBUG)_SINK=FILESPEC|&N] %q %s} %s\n' "$(basename "$1")" "$(getShortUsage general debug) [--]" 'COMMAND [...]'
-    printf 'Usage: ${DEBUG:+%q %s} %s\n' "$(basename "$1")" "$(getShortUsage general debug) --eval [--]" 'eval COMMAND [...]'
+    printf 'Usage: [ECHOTRACE_IFS=STRING|newline] [ECHOTRACE_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$(getShortUsage eval) [--] COMMAND [...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env ECHOTRACE_IFS=STRING|newline] [(ECHOTRACE|DEBUG)_SINK=FILESPEC|&N] %q %s} %s\n' "$(basename "$1")" "$(getShortUsage debug) [--]" 'COMMAND [...]'
+    printf 'Usage: ${DEBUG:+%q %s} %s\n' "$(basename "$1")" "$(getShortUsage debug) --eval [--]" 'eval COMMAND [...]'
 }
 printUsage()
 {

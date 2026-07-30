@@ -42,7 +42,6 @@ HELPDESCRIPTION
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
 HELPTEXT
-    echotrace --get-long-usage general 2>/dev/null
     verbose --get-long-usage general io debug-io 2>/dev/null
     cat <<HELPTEXT
 SEE ALSO:
