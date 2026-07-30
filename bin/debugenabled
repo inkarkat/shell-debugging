@@ -73,7 +73,7 @@ done
 
 printSink()
 {
-    sink="${DEBUGENABLED_SINK:-$DEBUG_SINK}"
+    sink="${DEBUGENABLED_SINK-$DEBUG_SINK}"
     case "$sink" in
 	'')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
 	\&+([0-9]))	sink="/dev/fd/${sink#\&}";;
