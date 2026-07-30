@@ -42,6 +42,9 @@ HELPDESCRIPTION
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
 HELPTEXT
+    echo 'echotrace options:'
+    echotrace --get-long-usage io debug-io 2>/dev/null
+    echo 'verbose options:'
     verbose --get-long-usage general io debug-io 2>/dev/null
     cat <<HELPTEXT
 SEE ALSO:
@@ -70,7 +73,7 @@ do
 	--eval)		echotraceArgs+=("$1"); verboseArgs+=("$1"); shift; isEval=t;;
 	--)		shift; break;;
 	-*)		let understoodArgCount=0
-			if argCount=$(echotrace --understand-for general --understands "$@"); then
+			if argCount=$(echotrace --understand-for general --understand-for io --understand-for debug-io --understands "$@"); then
 			    understoodArgCount=$argCount
 			    echotraceArgs+=("${@:1:argCount}")
 			elif [ $? -eq 2 ]; then
@@ -109,6 +112,25 @@ if [ -z "$DEBUG" ]; then
     exit $?
 fi
 
+setSinkAndExecute()
+{
+    case ",${DEBUG:-}," in
+	*,@(debug|${scriptName})=*,*)
+	    DEBUGCOMMAND_SINK=",${DEBUG},"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK#*,@(debug|${scriptName})=}"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK%%,*}"
+	    ;;
+    esac
+
+    if [ -n "${DEBUGCOMMAND_IFS+t}" ]; then
+	export VERBOSE_IFS="$DEBUGCOMMAND_IFS"
+	export ECHOTRACE_IFS="$DEBUGCOMMAND_IFS"
+    fi
+    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"}
+    export VERBOSE_SINK="${DEBUGCOMMAND_SINK:-$DEBUG_SINK}"
+    export ECHOTRACE_SINK="${DEBUGCOMMAND_SINK:-$DEBUG_SINK}"
+
+    exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
+}
+
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
     {
@@ -124,25 +146,17 @@ case ",${DEBUG:-}," in
     *,${debuggee}!${module:+:}${module},*)
 	debugCommand=(echotrace "${echotraceArgs[@]}")
 	debugCommandArgs=(--for "${debuggee}!" ${module:+--module "$module"})
-	;&
+	setSinkAndExecute "$@"
+	;;
+    *,${debuggee}!:*,*)	# Also activate on any module so that echotrace's --io-modules|--stdin-module options will be considered. echotrace will do proper module filtering, anyway; it's just a bit more inefficient.
+	debugCommand=(echotrace "${echotraceArgs[@]}")
+	debugCommandArgs=(--for "${debuggee}!")
+	setSinkAndExecute "$@"
+	;;
     *,${debuggee}${module:+:}${module},*)
 	;&
     *,${debuggee}:*,*)	# Also activate on any module so that verbose's --io-modules|--*-module options will be considered. verbose will do proper module filtering, anyway; it's just a bit more inefficient.
-	case ",${DEBUG:-}," in
-	    *,@(debug|${scriptName})=*,*)
-		DEBUGCOMMAND_SINK=",${DEBUG},"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK#*,@(debug|${scriptName})=}"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK%%,*}"
-		;;
-	esac
-
-	if [ -n "${DEBUGCOMMAND_IFS+t}" ]; then
-	    export VERBOSE_IFS="$DEBUGCOMMAND_IFS"
-	    export ECHOTRACE_IFS="$DEBUGCOMMAND_IFS"
-	fi
-	: ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"}
-	export VERBOSE_SINK="${DEBUGCOMMAND_SINK:-$DEBUG_SINK}"
-	export ECHOTRACE_SINK="${DEBUGCOMMAND_SINK:-$DEBUG_SINK}"
-
-	exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
+	setSinkAndExecute "$@"
 	;;
     *,@(debug|${scriptName}|verbose),*)
 	{ printf >/dev/tty '%s: Will log [and skip] command execution with DEBUG=%q[!]\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
