@@ -121,11 +121,9 @@ fi
 typeset -a debugCommand=(verbose "${verboseArgs[@]}" --on-debug)
 typeset -a debugCommandArgs=(--for "$debuggee" ${module:+--module "$module"})
 case ",${DEBUG:-}," in
-    *,${debuggee}${module:+:}${module}!,*)
+    *,${debuggee}!${module:+:}${module},*)
 	debugCommand=(echotrace "${echotraceArgs[@]}")
-	[ -n "$module" ] \
-	    && debugCommandArgs=(--for "$debuggee" --module "${module}!") \
-	    || debugCommandArgs=(--for "${debuggee}!")
+	debugCommandArgs=(--for "${debuggee}!" ${module:+--module "$module"})
 	;&
     *,${debuggee}${module:+:}${module},*)
 	;&
