@@ -112,11 +112,11 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [VERBOSE_IFS=STRING|newline] [VERBOSE_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$(getShortUsage general eval io) [-?|-h|--help] ..."
+    printf 'Usage: [VERBOSE_IFS=STRING|newline] [VERBOSE_SINK=FILESPEC|&N|""] %q %s\n' "$(basename "$1")" "$(getShortUsage general eval io) [-?|-h|--help] ..."
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '... [--] COMMAND [ARG ...]'
     echo
-    printf 'Usage: ${DEBUG:+[env VERBOSE_IFS=STRING|newline] [[VERBOSE|DEBUG]_SINK=FILESPEC|&N] %q %s} %s\n' "$(basename "$1")" "... $(getShortUsage general debug debug-io) [--]" 'COMMAND [ARG ...]'
+    printf 'Usage: ${DEBUG:+[env VERBOSE_IFS=STRING|newline] [[VERBOSE|DEBUG]_SINK=FILESPEC|&N|""] %q %s} %s\n' "$(basename "$1")" "... $(getShortUsage general debug debug-io) [--]" 'COMMAND [ARG ...]'
     printf 'Usage: ${DEBUG:+%q %s} %s\n' "$(basename "$1")" "... $(getShortUsage general debug) $(getShortUsage debug-io) --eval [--]" 'eval COMMAND [ARG ...]'
 }
 printUsage()

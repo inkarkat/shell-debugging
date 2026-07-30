@@ -7,8 +7,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [DUMPSTATUS_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" '[-v|--verbose] [--] COMMAND [ARG ...] [-?|-h|--help]'
-    printf 'Usage: ${DEBUG:+[env (DUMPSTATUS|DEBUG)_SINK=FILESPEC|&N] %q %s} %s\n' "$(basename "$1")" '-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE] [--verbose] [--]' 'COMMAND [ARG ...]'
+    printf 'Usage: [DUMPSTATUS_SINK=FILESPEC|&N|""] %q %s\n' "$(basename "$1")" '[-v|--verbose] [--] COMMAND [ARG ...] [-?|-h|--help]'
+    printf 'Usage: ${DEBUG:+[env (DUMPSTATUS|DEBUG)_SINK=FILESPEC|&N|""] %q %s} %s\n' "$(basename "$1")" '-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE] [--verbose] [--]' 'COMMAND [ARG ...]'
 }
 printUsage()
 {

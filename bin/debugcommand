@@ -5,7 +5,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+[env DEBUGCOMMAND_IFS=STRING|newline [DEBUG[COMMAND]_SINK=FILESPEC|&N]] %q %s} %s\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] $(echotrace --get-short-usage general 2>/dev/null) $(verbose --get-short-usage general io debug-io 2>/dev/null) [--]" '[SIMPLECOMMAND ...]'
+    printf 'Usage: ${DEBUG:+[env DEBUGCOMMAND_IFS=STRING|newline [DEBUG[COMMAND]_SINK=FILESPEC|&N|""]] %q %s} %s\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] $(echotrace --get-short-usage general 2>/dev/null) $(verbose --get-short-usage general io debug-io 2>/dev/null) [--]" '[SIMPLECOMMAND ...]'
     printf 'Usage: ${DEBUG:+%q %s} %s\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] $(echotrace --get-short-usage general 2>/dev/null) $(verbose --get-short-usage general io debug-io 2>/dev/null) --eval [--]" 'eval [SIMPLECOMMAND ...]'
 }
 printUsage()
@@ -125,8 +125,8 @@ setSinkAndExecute()
 	export ECHOTRACE_IFS="$DEBUGCOMMAND_IFS"
     fi
     : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"}
-    export VERBOSE_SINK="${DEBUGCOMMAND_SINK:-$DEBUG_SINK}"
-    export ECHOTRACE_SINK="${DEBUGCOMMAND_SINK:-$DEBUG_SINK}"
+    export VERBOSE_SINK="${DEBUGCOMMAND_SINK-$DEBUG_SINK}"
+    export ECHOTRACE_SINK="${DEBUGCOMMAND_SINK-$DEBUG_SINK}"
 
     exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
 }

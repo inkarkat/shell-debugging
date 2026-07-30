@@ -4,8 +4,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [DUMPARGS_SINK=FILESPEC|&N] %q %s\n' "$(basename "$1")" "$(dump-args --get-short-usage general 2>/dev/null) [--] COMMAND [ARG ...] [-?|-h|--help]"
-    printf 'Usage: ${DEBUG:+[env (DUMPARGS|DEBUG)_SINK=FILESPEC|&N] %q %s} %s\n' "$(basename "$1")" "$(dump-args --get-short-usage general 2>/dev/null) $(dump-args --get-short-usage debug 2>/dev/null) [--]" 'COMMAND [ARG ...]'
+    printf 'Usage: [DUMPARGS_SINK=FILESPEC|&N|""] %q %s\n' "$(basename "$1")" "$(dump-args --get-short-usage general 2>/dev/null) [--] COMMAND [ARG ...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env (DUMPARGS|DEBUG)_SINK=FILESPEC|&N|""] %q %s} %s\n' "$(basename "$1")" "$(dump-args --get-short-usage general 2>/dev/null) $(dump-args --get-short-usage debug 2>/dev/null) [--]" 'COMMAND [ARG ...]'
 }
 printUsage()
 {
