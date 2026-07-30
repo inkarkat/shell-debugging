@@ -184,6 +184,7 @@ esac
 case ",${DEBUG:-}," in
     *,${debuggee}!${module:+:}${module},*)
 	isActive=t
+	export PS4='! '
 	action=logCommands
 	;;
     *,${debuggee}\&${module:+:}${module},*)

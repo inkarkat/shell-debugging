@@ -252,7 +252,7 @@ case "$sink" in
     ?*)		exec 3>>"$sink";;
 esac
 
-nestingPrefix="$(debugNestingPrefix)"
+nestingPrefix="$(PS4='! ' debugNestingPrefix)"
 ECHOTRACE_IFS="${ECHOTRACE_IFS//$'\n'/$'\n'${nestingPrefix}}"
 printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
 
