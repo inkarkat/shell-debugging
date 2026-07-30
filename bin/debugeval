@@ -30,6 +30,9 @@ written as an execution trace.
 When \$DEBUG refers to DEBUGGEE&, COMMAND is printed for execution with tracing
 enabled (set -x) by the invoking eval and additionally written as an execution
 trace.
+When \$DEBUG refers to DEBUGGEE=OTHER-COMMAND, OTHER-COMMAND instead of COMMAND
+is printed for execution by the invoking eval and additionally written as an
+execution trace.
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
 With "DEBUG=debug[eval]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
@@ -163,6 +166,11 @@ case ",${DEBUG:-}," in
 	setSinkDefaults
 	beforeCommands="${traceRedir}; set -x"
 	afterCommands='set +x'
+	action=passthroughAndLogCommands
+	;;
+    *,${debuggee}=+([^:,])${module:+:}${module},*)
+	setSinkDefaults
+	commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
 	action=passthroughAndLogCommands
 	;;
     *,${debuggee}${module:+:}${module},*)
