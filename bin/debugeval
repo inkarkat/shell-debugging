@@ -118,25 +118,6 @@ if [ -z "$DEBUG" ]; then
     exit 0
 fi
 
-traceRedir=
-setSinkDefaults()
-{
-    case ",${DEBUG:-}," in
-	*,@(debug|${scriptName})=*,*) DEBUGEVAL_SINK=",${DEBUG},"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK#*,@(debug|${scriptName})=}"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK%%,*}"
-	    ;;
-	*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
-    esac
-
-    local sink="${DEBUGEVAL_SINK-$DEBUG_SINK}"
-    local sinkRedir
-    case "$sink" in
-	'')		sinkRedir='exec 3>&2'; traceRedir='BASH_XTRACEFD=2';;
-	\&+([0-9]))	sinkRedir="exec 3>$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
-	?*)		printf -v sinkRedir 'exec 3>>%q' "$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
-    esac
-    eval "$sinkRedir"
-}
-
 logCommands()
 {
     local timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
@@ -160,42 +141,72 @@ if [ -z "$debuggee" ]; then
     debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
 fi
 
-action=passthroughCommands
+case ",${DEBUG:-}," in
+    *,@(debug|${scriptName})=*,*) DEBUGEVAL_SINK=",${DEBUG},"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK#*,@(debug|${scriptName})=}"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK%%,*}"
+	;;
+    *)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+esac
+
+sink="${DEBUGEVAL_SINK-$DEBUG_SINK}"
+sinkRedir=
+traceRedir=
+case "$sink" in
+    '')		sinkRedir='exec 3>&2'; traceRedir='BASH_XTRACEFD=2';;
+    \&+([0-9]))	sinkRedir="exec 3>$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
+    ?*)		printf -v sinkRedir 'exec 3>>%q' "$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
+esac
+
+isActive=
+action=
 case ",${DEBUG:-}," in
     *,${debuggee}!${module:+:}${module},*)
-	setSinkDefaults
+	isActive=t
 	action=logCommands
 	;;
     *,${debuggee}\&${module:+:}${module},*)
-	setSinkDefaults
+	isActive=t
 	beforeCommands="${traceRedir}; set -x"
 	afterCommands='set +x'
-	action=passthroughAndLogCommands
-	;;
-    *,${debuggee}=+([^:,])${module:+:}${module},*)
-	setSinkDefaults
-	commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
-	action=passthroughAndLogCommands
-	;;
-    *,${debuggee}^=+([^:,])${module:+:}${module},*)
-	setSinkDefaults
-	prefix=",${DEBUG},"; prefix="${prefix#*,${debuggee}^=}"; prefix="${prefix%%${module:+:}${module},*}"
-	commands="${prefix}${commands}"
-	action=passthroughAndLogCommands
-	;;
-    *,${debuggee}+=+([^:,])${module:+:}${module},*)
-	setSinkDefaults
-	suffix=",${DEBUG},"; suffix="${suffix#*,${debuggee}+=}"; suffix="${suffix%%${module:+:}${module},*}"
-	commands+="$suffix"
-	action=passthroughAndLogCommands
 	;;
     *,${debuggee}${module:+:}${module},*)
-	setSinkDefaults
-	action=passthroughAndLogCommands
-	;;
-    *,@(debug|${scriptName}),*)
-	{ printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	isActive=t
 	;;
 esac
+# We can only embellish / replace the COMMAND if it's still to be executed (i.e.
+# not disabled by the ! case).
+if [ -z "$action" ]; then
+    # Need to do the replacement before any embellishments.
+    case ",${DEBUG:-}," in
+	*,${debuggee}=+([^:,])${module:+:}${module},*)
+	    isActive=t
+	    commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
+	    ;;
+    esac
+    case ",${DEBUG:-}," in
+	*,${debuggee}^=+([^:,])${module:+:}${module},*)
+	    isActive=t
+	    prefix=",${DEBUG},"; prefix="${prefix#*,${debuggee}^=}"; prefix="${prefix%%${module:+:}${module},*}"
+	    commands="${prefix}${commands}"
+	    ;;
+    esac
+    case ",${DEBUG:-}," in
+	*,${debuggee}+=+([^:,])${module:+:}${module},*)
+	    isActive=t
+	    suffix=",${DEBUG},"; suffix="${suffix#*,${debuggee}+=}"; suffix="${suffix%%${module:+:}${module},*}"
+	    commands+="$suffix"
+	    ;;
+    esac
+fi
 
-$action
+if [ "$isActive" ]; then
+    eval "$sinkRedir"
+    ${action:-passthroughAndLogCommands}
+else
+    case ",${DEBUG:-}," in
+	*,@(debug|${scriptName}),*)
+	    { printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	    ;;
+    esac
+
+    passthroughCommands
+fi
