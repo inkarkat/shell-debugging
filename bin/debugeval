@@ -180,6 +180,8 @@ handleToFile()
 
     # Redirect the captured output to the specified FILE.
     printf -v sinkRedir 'exec 3>>%q' "$toFile"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3"
+
+    toFile=''	# No-op if the function is called again.
 }
 
 isActive=
