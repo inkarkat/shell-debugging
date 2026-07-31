@@ -163,12 +163,22 @@ case ",${DEBUG}," in
 esac
 
 sink="${DEBUGEVAL_SINK-$DEBUG_SINK}"
+redir=
 sinkRedir=
 traceRedir=
 case "$sink" in
-    '')		sinkRedir='exec 3>&2'; traceRedir='BASH_XTRACEFD=2';;
-    \&+([0-9]))	sinkRedir="exec 3>$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
-    ?*)		printf -v sinkRedir 'exec 3>>%q' "$sink"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3";;
+    '')		redir='>&2'
+		sinkRedir="exec 3${redir}"
+		traceRedir='BASH_XTRACEFD=2'
+		;;
+    \&+([0-9]))	redir=">$sink"
+		sinkRedir="exec 3${redir}"
+		traceRedir="${sinkRedir}; BASH_XTRACEFD=3"
+		;;
+    ?*)		printf -v redir '>>%q' "$sink"
+		sinkRedir="exec 3${redir}"
+		traceRedir="${sinkRedir}; BASH_XTRACEFD=3"
+		;;
 esac
 handleToFile()
 {
@@ -179,7 +189,9 @@ handleToFile()
     (eval "$sinkRedir"; printf >&3 '%s%s Logged to %s\n' "${timestampPrefix}${timestampPrefix:+ }" "$debuggee (${module}${module:+, }${PPID})" "$toFile")
 
     # Redirect the captured output to the specified FILE.
-    printf -v sinkRedir 'exec 3>>%q' "$toFile"; traceRedir="${sinkRedir}; BASH_XTRACEFD=3"
+    printf -v redir '>>%q' "$toFile"
+    sinkRedir="exec 3${redir}"
+    traceRedir="${sinkRedir}; BASH_XTRACEFD=3"
 
     toFile=''	# No-op if the function is called again.
 }
