@@ -43,10 +43,8 @@ do
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--)		shift; break;;
 	-*)		if argCount=$(dump-args --understands "$@"); then
-			    while ((argCount-- > 0))
-			    do
-				dumpArgsArgs+=("$1"); shift
-			    done
+			    dumpArgsArgs+=("${@:1:argCount}")
+			    shift $argCount
 			elif [ $? -eq 2 ]; then
 			    exit 2
 			else
