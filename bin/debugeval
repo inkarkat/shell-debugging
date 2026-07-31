@@ -214,7 +214,6 @@ case ",${DEBUG}," in
 	isActive=t
 	;;
     *,${debuggee}@*([^:,])${module:+:}${module},*)
-	isActive=t
 	filespec=",${DEBUG},"; filespec="${filespec#*,${debuggee}@}"; filespec="${filespec%%${module:+:}${module},*}"
 	eval "filespec=$filespec" # Expand environment variables and tilde.
 	if [ -n "$filespec" ]; then
@@ -224,6 +223,7 @@ case ",${DEBUG}," in
 		filespec="${BASH_REMATCH[1]}${BASH_REMATCH[3]}"
 	    fi
 	    if [ -e "$filespec" ]; then
+		isActive=t
 		printf -v commands 'cat %q%s' "$filespec" "${exitStatus:+; exit $exitStatus}"
 		export PS4='@ '
 	    else
