@@ -268,7 +268,8 @@ if [ "$isActive" ]; then
 else
     case ",${DEBUG}," in
 	*,@(debug|${scriptName}),*)
-	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    quotedModule=; [ -n "$module" ] && printf -v quotedModule %q "$module"
+	    printfToTerm '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" '[!|&|=OTHER-COMMAND|@[N-]FILE|^=PREFIX|+=SUFFIX|?PREDICATE]' "${module:+:}${quotedModule}"
 	    ;;
     esac
 
