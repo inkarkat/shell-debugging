@@ -30,6 +30,9 @@ written as an execution trace.
 When \$DEBUG refers to DEBUGGEE&, COMMAND is printed for execution with tracing
 enabled (set -x) by the invoking eval and additionally written as an execution
 trace.
+When \$DEBUG refers to DEBUGGEE~, COMMAND is printed for execution with time
+reporting (to the debug file) enabled by the invoking eval and additionally
+written as an execution trace.
 When \$DEBUG refers to DEBUGGEE=OTHER-COMMAND, OTHER-COMMAND instead of COMMAND
 is printed for execution by the invoking eval and additionally written as an
 execution trace.
@@ -227,6 +230,12 @@ case ",${DEBUG}," in
 	silentCommandPrefix="${traceRedir}; set -x; "
 	silentCommandSuffix='; set +x'
 	;;
+    *,${debuggee}~${module:+:}${module},*)
+	isActive=t
+	handleToFile
+	silentCommandPrefix='{ TIMEFORMAT="real %3lR, user %3lU, sys %3lS"; time '
+	silentCommandSuffix="; } 2$redir"
+	;;
     *,${debuggee}=*([^:,])${module:+:}${module},*)
 	isActive=t
 	commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
@@ -283,7 +292,7 @@ else
     case ",${DEBUG}," in
 	*,@(debug|${scriptName}),*)
 	    quotedModule=; [ -n "$module" ] && printf -v quotedModule %q "$module"
-	    printfToTerm '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" '[!|&|=OTHER-COMMAND|@[N-]FILE|^=PREFIX|+=SUFFIX|?PREDICATE]' "${module:+:}${quotedModule}"
+	    printfToTerm '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" '[!|&|~|=OTHER-COMMAND|@[N-]FILE|^=PREFIX|+=SUFFIX|?PREDICATE]' "${module:+:}${quotedModule}"
 	    ;;
     esac
 
