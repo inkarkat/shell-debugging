@@ -199,6 +199,9 @@ case ",${DEBUG}," in
 	;;
 esac
 case ",${DEBUG}," in
+    *,${debuggee}${module:+:}${module},*)
+	isActive=t
+	;;
     *,${debuggee}!${module:+:}${module},*)
 	isActive=t
 	export PS4='! '
@@ -210,8 +213,11 @@ case ",${DEBUG}," in
 	beforeCommands="${traceRedir}; set -x"
 	afterCommands='set +x'
 	;;
-    *,${debuggee}${module:+:}${module},*)
+    *,${debuggee}=*([^:,])${module:+:}${module},*)
 	isActive=t
+	commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
+	export PS4='= '
+	[ -z "$commands" ] && printfToTerm '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;;
     *,${debuggee}@*([^:,])${module:+:}${module},*)
 	filespec=",${DEBUG},"; filespec="${filespec#*,${debuggee}@}"; filespec="${filespec%%${module:+:}${module},*}"
@@ -234,18 +240,9 @@ case ",${DEBUG}," in
 	fi
 	;;
 esac
-# We can only embellish / replace the COMMAND if it's still to be executed (i.e.
+# We can only embellish the COMMAND if it's still to be executed (i.e.
 # not disabled by the ! case).
 if [ -z "$action" ]; then
-    # Need to do the replacement before any embellishments.
-    case ",${DEBUG}," in
-	*,${debuggee}=*([^:,])${module:+:}${module},*)
-	    isActive=t
-	    commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
-	    export PS4='= '
-	    [ -z "$commands" ] && printfToTerm '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
-	    ;;
-    esac
     case ",${DEBUG}," in
 	*,${debuggee}^=*([^:,])${module:+:}${module},*)
 	    isActive=t
