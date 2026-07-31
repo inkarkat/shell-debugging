@@ -116,11 +116,11 @@ if [ -z "$commands" ]; then
     exit 2
 fi >&2
 
-beforeCommands=
-afterCommands=
+silentCommandPrefix=
+silentCommandSuffix=
 passthroughCommands()
 {
-    printf %s%s%s "${beforeCommands}${beforeCommands:+; }" "$commands" "${afterCommands:+; }${afterCommands}"
+    printf %s%s%s "$silentCommandPrefix" "$commands" "$silentCommandSuffix"
 }
 
 if [ -z "$DEBUG" ]; then
@@ -224,8 +224,8 @@ case ",${DEBUG}," in
     *,${debuggee}\&${module:+:}${module},*)
 	isActive=t
 	handleToFile
-	beforeCommands="${traceRedir}; set -x"
-	afterCommands='set +x'
+	silentCommandPrefix="${traceRedir}; set -x; "
+	silentCommandSuffix='; set +x'
 	;;
     *,${debuggee}=*([^:,])${module:+:}${module},*)
 	isActive=t
