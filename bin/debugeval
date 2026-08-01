@@ -204,7 +204,7 @@ isActive=
 action=
 case ",${DEBUG}," in
     *,${debuggee}\?*([^:,])${module:+:}${module},*)
-	predicate=",${DEBUG},"; predicate="${predicate#*,${debuggee}?}"; predicate="${predicate%%${module:+:}${module},*}"
+	predicate=",${DEBUG},"; predicate="${predicate#*,${debuggee}\?}"; predicate="${predicate%%${module:+:}${module},*}"
 	if [ -z "$predicate" ]; then
 	    isActive=t
 	    printfToTerm '%s: Warning: Empty PREDICATE given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
