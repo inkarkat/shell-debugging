@@ -1,7 +1,7 @@
 #!/bin/sh source-this-script
 
 addAliasSupport withDebug \
-    'v' \
-    'verbose' \
-    'mM' \
-    'module|only-module|for'
+    '12IPTaistv' \
+    'stdout|stderr|append|no-pager|inbox|to-separate-files|to-tty|no-timestamps|interactive|verbose' \
+    'Mmx' \
+    'extension|for|module|only-module'
