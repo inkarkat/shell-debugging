@@ -7,7 +7,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: [DEBUG[TRACE]_SINK=FILESPEC|&N|""] ${DEBUG:+eval $(%q %s)}\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-o $-] [-- "$@"] [-?|-h|--help]'
+    printf 'Usage: ${DEBUG:+eval $([DEBUG[TRACE]_SINK=FILESPEC|&N|""] %q %s)}\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-o $-] [-- "$@"] [-?|-h|--help]'
 }
 printUsage()
 {
