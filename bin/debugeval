@@ -65,7 +65,8 @@ HELPDESCRIPTION
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
     --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
-			and just leave a reference to FILE there.
+			for printing the execution trace, command tracing and
+			time reporting and just leave a reference to FILE there.
 SEE ALSO:
 - debugcustom can directly (i.e. without eval) execute COMMAND(s) if debugging
   is enabled for the caller, and will log them. Prefer if COMMAND(s) can be
