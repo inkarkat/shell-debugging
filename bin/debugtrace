@@ -7,7 +7,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: [DEBUG[TRACE]_SINK=FILESPEC|&N|""] ${DEBUG:+eval $(%q %s)}\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-- "$@"] [-?|-h|--help]'
+    printf 'Usage: [DEBUG[TRACE]_SINK=FILESPEC|&N|""] ${DEBUG:+eval $(%q %s)}\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-o $-] [-- "$@"] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -68,6 +68,8 @@ HELPDESCRIPTION
 			Uniquely identify this trace point when using multiple
 			in the same DEBUGGEE, so that you can enable tracing for
 			each separately.
+    -o \$-		Pass the caller's current shell options to allow
+			detection of whether debugging is currently enabled.
 SEE ALSO:
 - debugeval enables tracing for a single passed COMMAND instead of all following
   statements in the caller, and has similar replacements and embellishments for
@@ -80,6 +82,7 @@ module=
 toFile=
 description=
 tracePointName=
+unset isTracing
 hasArgs=
 while [ $# -ne 0 ]
 do
@@ -91,6 +94,12 @@ do
 	--description|-d)
 			shift; description="${1?}"; shift;;
 	--point|-p)	shift; tracePointName="${1:?}"; shift;;
+	-o)		shift
+			[[ "$1" = *x* ]] \
+			    && isTracing=t \
+			    || isTracing=
+			shift
+			;;
 	--)		shift; hasArgs=t; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -247,12 +256,15 @@ esac
 case ",${DEBUG}," in
     *,${debuggee}\&*([^:,])${module:+:}${module},*)
 	enabledTracePointName=",${DEBUG},"; enabledTracePointName="${enabledTracePointName#*,${debuggee}&}"; enabledTracePointName="${enabledTracePointName%%${module:+:}${module},*}"
-	isActive=t
 	if [ -z "$enabledTracePointName" ] || [ "$tracePointName" = "$enabledTracePointName" ]; then
-	    actions+=("enabling tracing${tracePointName:+ at }${tracePointName}${toFile:+ to }${toFile}")
-	    postLogCommand=handleToFile
-	    commands+="${commands:+; }${traceRedir}; set -x"
-	else
+	    if [ ! "$isTracing" ]; then
+		isActive=t
+		actions+=("enabling tracing${tracePointName:+ at }${tracePointName}${toFile:+ to }${toFile}")
+		postLogCommand=handleToFile
+		commands+="${commands:+; }${traceRedir}; set -x"
+	    fi
+	elif [ -z "${isTracing+t}" ] || [ "$isTracing" ]; then
+	    isActive=t
 	    actions+=("disabling tracing${tracePointName:+ at }${tracePointName}")
 	    commands+="${commands:+; }set +x"
 	fi
