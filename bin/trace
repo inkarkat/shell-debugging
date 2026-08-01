@@ -118,7 +118,7 @@ else
 		-- "$programFilespec"
     then
 	# This script supports tracing via environment variable.
-	[ ${#traceEnableCommand[@]} -eq 0 ] || export TRACE+="${TRACE:+,}$(basename -- "$programFilespec")"
+	[ ${#traceEnableCommand[@]} -eq 0 ] || export TRACE+="${TRACE:+,}${programName}"
 	"${capture[@]:-exec}" "$program" "$@"
     elif [ ${#capture[@]} -eq 0 ]; then
 	BASH_ARGV0="$program"	# Bash 5+ only
