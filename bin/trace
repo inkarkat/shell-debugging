@@ -33,8 +33,7 @@ HELPDESCRIPTION
 			and errors are shown immediately, and are not part of
 			the trace.
     --inbox|-i		Write the trace into the inbox.
-(*) The command needs to have support for this via the TRACE environment
-    variable.
+(*) The command needs to have support for this by using debugtrace.
 HELPTEXT
 }
 
@@ -46,8 +45,8 @@ while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
-	--for|-f)	shift; TRACE+="${TRACE:+,}${1:?}"; shift; isFor=t;;
-	--only-for|-F)	shift; TRACE+="${TRACE:+,}${1:?}"; shift; isOnlyFor=t;;
+	--for|-f)	shift; DEBUG+="${DEBUG:+,}${1:?}&"; shift; isFor=t;;
+	--only-for|-F)	shift; DEBUG+="${DEBUG:+,}${1:?}&"; shift; isOnlyFor=t;;
 	--paginate|-p)	shift
 			[ "$PAGER" = smartless ] && PAGER=less	# smartless does not page small outputs that fit the terminal, but we explicitly want to page through the captured trace.
 			capture=(setupCapture); viewer=("${PAGER:-less}" --RAW-CONTROL-CHARS --)
@@ -58,7 +57,7 @@ do
 	*)		break;;
     esac
 done
-export TRACE
+export DEBUG
 typeset -a traceEnableCommand=(set -x)
 if [ "$isOnlyFor" ] && [ ! "$isFor" ]; then
     traceEnableCommand=()
@@ -112,13 +111,12 @@ else
     programFilespec="$(which -- "$program" 2>/dev/null)"
     programName="${programFilespec##*/}"; programName="${programName%.*}"
     if [ -n "$programFilespec" ] \
-	&& grep --fixed-strings --quiet \
-		-e 'case ",${TRACE:-}," in *,${BASH_SOURCE[0]##*/},*)' \
-		-e 'case ",${TRACE:-}," in *,'"${programName}"',*)' \
+	&& grep --quiet \
+		-e '\${DEBUG:+eval \$(\(DEBUG[^[:space:]]\+[[:space:]]\+\)\?debugtrace[[:space:]]' \
 		-- "$programFilespec"
     then
 	# This script supports tracing via environment variable.
-	[ ${#traceEnableCommand[@]} -eq 0 ] || export TRACE+="${TRACE:+,}${programName}"
+	[ ${#traceEnableCommand[@]} -eq 0 ] || export DEBUG+="${DEBUG:+,}${programName}"
 	"${capture[@]:-exec}" "$program" "$@"
     elif [ ${#capture[@]} -eq 0 ]; then
 	BASH_ARGV0="$program"	# Bash 5+ only
