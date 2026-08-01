@@ -95,6 +95,7 @@ add()
 {
     DEBUG+="${DEBUG:+,}${1:?}"
 }
+
 typeset -a commandNames=()
 addDebug()
 {
@@ -106,23 +107,8 @@ addDebug()
 	add "${commandName}${extension}${module:+:}${module}"
     done
 }
-programName=
-addDebugCommand()
-{
-    local cmd="${1:?}"; shift
-    commandName="$(COMMANDNAME_WRAPPERS='' commandName --no-interpreter --eval "$cmd")"
-    if [ -z "$commandName" ]; then
-	printf >&2 'ERROR: Could not determine command name for %s\n' "$cmd"
-	return 1
-    fi
 
-    if [[ "$cmd" =~ ^(\.|source)[[:space:]]+ ]]; then
-	: ${programName:=$commandName}
-    fi
-
-    addDebug "$commandName"
-}
-
+commands=
 addCommand()
 {
     local cmd="${1:?}"; shift
@@ -141,6 +127,24 @@ addCommand()
     done
 
     commands+="${commands:+ $WITHDEBUG_COMMAND_JOINER }${wrappers}${cmd}"
+}
+
+programName=
+addDebugCommand()
+{
+    local cmd="${1:?}"; shift
+    commandName="$(COMMANDNAME_WRAPPERS='' commandName --no-interpreter --eval "$cmd")"
+    if [ -z "$commandName" ]; then
+	printf >&2 'ERROR: Could not determine command name for %s\n' "$cmd"
+	return 1
+    fi
+
+    if [[ "$cmd" =~ ^(\.|source)[[:space:]]+ ]]; then
+	: ${programName:=$commandName}
+    fi
+
+    addDebug "$commandName"
+    addCommand "$cmd"
 }
 
 handleRecall()
@@ -262,7 +266,6 @@ isIncludeStderr=
 isAppend=
 isInteractive=
 isVerbose=
-commands=
 let commandCnt=0
 unset sink
 pagerCommand="${PAGER:-less}"
@@ -308,7 +311,6 @@ do
 	--extension|-x)	shift; extension="${1?}"; shift;;
 	--command|-c)	shift
 			addDebugCommand "${1:?}" || exit 2
-			addCommand "$1"
 			if [[ "$1" =~ [\;\&\|] ]]; then
 			    let commandCnt+=2	# multiple commands
 			else
@@ -330,7 +332,6 @@ do
 			fi >&2
 			shift
 			addDebugCommand "$cmd" || exit 2
-			addCommand "$cmd"
 			let commandCnt+=1
 			;;
 	--)		shift; break;;
@@ -344,7 +345,6 @@ if [ $# -ne 0 ]; then
     printf -v quotedSimpleCommand '%q ' "$@"
     quotedSimpleCommand="${quotedSimpleCommand% }"
     addDebugCommand "$quotedSimpleCommand" || exit 2
-    addCommand "$quotedSimpleCommand"
     if [ "${#commandNames[@]}" -gt 1 ]; then
 	# Use the trailing SIMPLECOMMAND as the command name for the log file, not the
 	# first --command|--exec COMMAND.
