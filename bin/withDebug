@@ -372,6 +372,9 @@ do
 	--inbox|-i)	nonCommandArgs+=("$1"); shift; captureCommand=(saveToInbox); pager=();;
 	--to-separate-files|-s)
 			nonCommandArgs+=("$1"); shift; sink='';;
+	--to-stderr)	nonCommandArgs+=("$1"); shift; sink='&2'; pager=()
+			[ -n "${DEBUG_TIMESTAMP_COMMAND+t}" ] || export DEBUG_TIMESTAMP_COMMAND=''
+			;;
 	--to-tty|-t)	nonCommandArgs+=("$1"); shift; sink='/dev/tty'; pager=()
 			[ -n "${DEBUG_TIMESTAMP_COMMAND+t}" ] || export DEBUG_TIMESTAMP_COMMAND=''
 			;;
@@ -451,7 +454,7 @@ if [ $# -ne 0 ]; then
     let commandCnt+=1
 fi
 if [ -n "${sink+t}" -a ${#captureCommand[@]} -gt 0 ]; then
-    echo 'ERROR: Cannot combine --to FILE or -s|--to-separate-files or -t|--to-tty with -i|--inbox.'
+    echo 'ERROR: Cannot combine --to FILE or -s|--to-separate-files or --to-stderr or -t|--to-tty with -i|--inbox.'
     echo
     printUsage "$0"
     exit 2
@@ -522,6 +525,11 @@ elif [ -n "${sink+t}" -a -z "$sink" ]; then
 	exit 2
     fi
     # Let each command write to its own log file; do not create a single log file.
+elif [ "$sink" = '&2' ]; then
+    # export BASH_XTRACEFD=2	# This is the default.
+    isIncludeStdout=
+    isIncludeStderr=
+    export DEBUG_SINK=''    # Empty means stderr.
 else
     [ "$isAppend" ] || : > "$sink"
     exec 3>>"${sink:?}"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
