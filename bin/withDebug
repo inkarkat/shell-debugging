@@ -114,7 +114,11 @@ addDebug()
 
     local module; for module in "${modules[@]}"
     do
-	local extension; for extension in "${extensions[@]}"
+	[ ${#extensions[@]} -gt 0 ] \
+	    && typeset -a debugExtensions=("${extensions[@]}") \
+	    || typeset -a debugExtensions=('')
+
+	local extension; for extension in "${debugExtensions[@]}"
 	do
 	    add "${commandName}${extension}${module:+:}${module}"
 	done
