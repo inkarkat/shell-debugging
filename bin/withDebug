@@ -211,8 +211,8 @@ handleStoredArguments()
 	exit 1
     fi
 
-    local overrideToStdout=
-    local overrideToStderr=
+    local overrideStdout=
+    local overrideStderr=
     local overrideAppend=
     local overrideInteractive=
     local overrideVerbose=
