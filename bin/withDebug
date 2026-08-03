@@ -195,10 +195,11 @@ addDebugCommand()
     addCommand "$cmd" "$isAddDebugCommand"
 }
 
-handleRecall()
+handleStoredArguments()
 {
-    if [ ! -r "$WITHDEBUG_RECALL_FILESPEC" ]; then
-	echo >&2 'ERROR: No previous debug command to retry.'
+    local storedArgumentFilespec="${1:?}"; shift
+    if [ ! -r "$storedArgumentFilespec" ]; then
+	echo >&2 'ERROR: No previous debug command.'
 	exit 1
     fi
 
@@ -243,7 +244,7 @@ handleRecall()
 	esac
     done
 
-    source "$WITHDEBUG_RECALL_FILESPEC" || exit 3
+    source "$storedArgumentFilespec" || exit 3
 
     # Iterate over the previously given arguments to remove those also given to the
     # recall.
@@ -336,7 +337,7 @@ while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
-	--recall)	shift; handleRecall "$@"; set -- "${allargs[@]}";;
+	--recall)	shift; handleStoredArguments "$WITHDEBUG_RECALL_FILESPEC" "$@"; set -- "${allargs[@]}";;
 	--list-targets|-l)
 			# Note: Not covered by --recall.
 			shift
