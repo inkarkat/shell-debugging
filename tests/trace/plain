@@ -7,4 +7,5 @@ ${DEBUG:+debuglog This is the main script.}
 
 sleep 0.1
 trap 'echo EOF' EXIT
-"${scriptDir}/subordinate.sh" foo
+"${scriptDir}/subordinate.sh" foo bar "$@"
+"${scriptDir}/subordinate.sh" gaga lala "$@"

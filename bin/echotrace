@@ -200,14 +200,25 @@ logStdin()
     done
 }
 
-setSinkDefaults()
+unset sink
+setSink()
 {
+    [ -n "${sink+t}" ] && return 0
+
     case ",${DEBUG}," in
 	*,@(debug|${scriptName})=*,*)
 	    ECHOTRACE_SINK=",${DEBUG},"; ECHOTRACE_SINK="${ECHOTRACE_SINK#*,@(debug|${scriptName})=}"; ECHOTRACE_SINK="${ECHOTRACE_SINK%%,*}"
 	    ;;
     esac
     timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
+
+    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"}
+    sink="${ECHOTRACE_SINK-$DEBUG_SINK}"
+    case "$sink" in
+	'')		exec 3>&2;;
+	\&+([0-9]))	eval "exec 3>$sink";;
+	?*)		exec 3>>"$sink";;
+    esac
 }
 
 
@@ -222,36 +233,28 @@ fi
 
 case ",${DEBUG}," in
     *,${debuggee}:${stdinModule},*)
-	setSinkDefaults
+	setSink
 	isLogStdin=t
 	;;
     *,${debuggee}${module:+:}${module},*)
-	setSinkDefaults
+	setSink
 	;;
     *,@(debug|${scriptName}),*)
-	{
-	    if [ "$isLogStdin" ]; then
-		printf >/dev/tty '%s: Will skip command execution and just log the command and stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
-	    elif [ -n "$stdinModule" ]; then
-		printf >/dev/tty '%s: Will skip command execution and just log the command with DEBUG=%q, stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}" "${debuggee}:${stdinModule}"
-	    else
-		printf >/dev/tty '%s: Will skip command execution and just log the command with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
-	    fi
-	} 2>/dev/null
+	setSink
+	if [ "$isLogStdin" ]; then
+	    printf >&3 '%s: Will skip command execution and just log the command and stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	elif [ -n "$stdinModule" ]; then
+	    printf >&3 '%s: Will skip command execution and just log the command with DEBUG=%q, stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}" "${debuggee}:${stdinModule}"
+	else
+	    printf >&3 '%s: Will skip command execution and just log the command with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	fi
 	;&
     *)  executor "$@"
 	exit $?
 	;;
 esac
 
-: ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"}
-sink="${ECHOTRACE_SINK-$DEBUG_SINK}"
-case "$sink" in
-    '')		exec 3>&2;;
-    \&+([0-9]))	eval "exec 3>$sink";;
-    ?*)		exec 3>>"$sink";;
-esac
-
+setSink
 nestingPrefix="$(PS4='! ' debugNestingPrefix)"
 ECHOTRACE_IFS="${ECHOTRACE_IFS//$'\n'/$'\n'${nestingPrefix}}"
 printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"

@@ -325,8 +325,11 @@ executeAndCapture012()
 	| logWithPrefix "$stdoutPrefix"
 }
 
+unset timestampPrefix
 setSinkDefaults()
 {
+    [ -n "${timestampPrefix+t}" ] && return 0
+
     case ",${DEBUG}," in
 	*,@(debug|${scriptName})=*,*)
 	    VERBOSE_SINK=",${DEBUG},"; VERBOSE_SINK="${VERBOSE_SINK#*,@(debug|${scriptName})=}"; VERBOSE_SINK="${VERBOSE_SINK%%,*}"
@@ -337,9 +340,24 @@ setSinkDefaults()
     timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
 }
 
-printfToTerm()
+unset sink
+setSink()
 {
-    { printf >/dev/tty "$@"; } 2>/dev/null
+    [ -n "${sink+t}" ] && return 0
+
+    setSinkDefaults
+    sink="${VERBOSE_SINK-${isOnDebug:+$DEBUG_SINK}}"
+    case "$sink" in
+	'')		exec 3>&2;;
+	\&+([0-9]))	eval "exec 3>$sink";;
+	?*)		exec 3>>"$sink";;
+    esac
+}
+
+printfToSink()
+{
+    setSink
+    printf >&3 "$@"
 }
 
 timestampPrefix=
@@ -360,7 +378,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 	    ;;
 	*,@(debug|${scriptName}),*)
 	    logFileDescriptorWhat=; logFileDescriptorWhat="${!logFileDescriptors[*]}"
-	    printfToTerm '%s: Will log command%s with DEBUG=%q\n' "$scriptName" "${logFileDescriptorWhat:+ and file descriptor(s) }${logFileDescriptorWhat}" "${debuggee}${module:+:}${module}"
+	    printfToSink '%s: Will log command%s with DEBUG=%q\n' "$scriptName" "${logFileDescriptorWhat:+ and file descriptor(s) }${logFileDescriptorWhat}" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
 
@@ -371,7 +389,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 		setSinkDefaults
 		;;
 	    *,@(debug|${scriptName}),*)
-		printfToTerm '%s: Will log stdin with DEBUG=%q\n' "$scriptName" "${debuggee}:${stdinModule}"
+		printfToSink '%s: Will log stdin with DEBUG=%q\n' "$scriptName" "${debuggee}:${stdinModule}"
 		;&
 	    *)	unset 'logFileDescriptors[0]';;
 	esac
@@ -383,7 +401,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 		setSinkDefaults
 		;;
 	    *,@(debug|${scriptName}),*)
-		printfToTerm '%s: Will log stdout with DEBUG=%q\n' "$scriptName" "${debuggee}:${stdoutModule}"
+		printfToSink '%s: Will log stdout with DEBUG=%q\n' "$scriptName" "${debuggee}:${stdoutModule}"
 		;&
 	    *)	unset 'logFileDescriptors[1]';;
 	esac
@@ -395,19 +413,14 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 		setSinkDefaults
 		;;
 	    *,@(debug|${scriptName}),*)
-		printfToTerm '%s: Will log stderr with DEBUG=%q\n' "$scriptName" "${debuggee}:${stderrModule}"
+		printfToSink '%s: Will log stderr with DEBUG=%q\n' "$scriptName" "${debuggee}:${stderrModule}"
 		;&
 	    *)	unset 'logFileDescriptors[2]';;
 	esac
 fi
 
-sink="${VERBOSE_SINK-${isOnDebug:+$DEBUG_SINK}}"
 if [ "$isActive" -o ${#logFileDescriptors[@]} -gt 0 ]; then
-    case "$sink" in
-	'')		exec 3>&2;;
-	\&+([0-9]))	eval "exec 3>$sink";;
-	?*)		exec 3>>"$sink";;
-    esac
+    setSink
 
     nestingPrefix="$(debugNestingPrefix)"
     VERBOSE_IFS="${VERBOSE_IFS//$'\n'/$'\n'${nestingPrefix}}"

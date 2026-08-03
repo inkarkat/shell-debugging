@@ -81,9 +81,19 @@ do
     esac
 done
 
-printfToTerm()
+unset sink
+typeset -a colorArg=(--no-color)
+setSink()
 {
-    { printf >/dev/tty "$@"; } 2>/dev/null
+    [ -n "${sink+t}" ] && return 0
+
+    sink="${DUMPFILES_SINK:-${isOnDebug:+$DEBUG_SINK}}"
+    case "$sink" in
+	'')		exec >&2;;
+	\&+([0-9]))	eval "exec >$sink";;
+	/dev/tty)	colorArg=();;&
+	?*)		exec >>"$sink";;
+    esac
 }
 
 if [ "$isOnDebug" ]; then
@@ -107,21 +117,15 @@ if [ "$isOnDebug" ]; then
 	    esac
 	    ;;
 	*,@(debug|${scriptName}),*)
-	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    setSink
+	    printf '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    exit 99
 	    ;;
 	*)  exit 99;;
     esac
 fi
 
-typeset -a colorArg=(--no-color)
-sink="${DUMPFILES_SINK:-${isOnDebug:+$DEBUG_SINK}}"
-case "$sink" in
-    '')		exec >&2;;
-    \&+([0-9]))	eval "exec >$sink";;
-    /dev/tty)	colorArg=();;&
-    ?*)		exec >>"$sink";;
-esac
+setSink
 
 [ $# -gt 0 ] || exit 1
 

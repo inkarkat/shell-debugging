@@ -113,6 +113,19 @@ if [ -z "$DEBUG" ]; then
     exit $?
 fi
 
+unset sink
+setSink()
+{
+    [ -n "${sink+t}" ] && return 0
+
+    sink="${DEBUGCUSTOM_SINK-$DEBUG_SINK}"
+    case "$sink" in
+	'')		exec >&2;;
+	\&+([0-9]))	eval "exec >$sink";;
+	?*)		exec >>"$sink";;
+    esac
+}
+
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
     {
@@ -133,12 +146,7 @@ case ",${DEBUG}," in
 	if [ "$isInvertMatch" ]; then
 	    exit 0
 	else
-	    sink="${DEBUGCUSTOM_SINK-$DEBUG_SINK}"
-	    case "$sink" in
-		'')		exec >&2;;
-		\&+([0-9]))	eval "exec >$sink";;
-		?*)		exec >>"$sink";;
-	    esac
+	    setSink
 
 	    output="$(eval "$commands" 2>&1)"
 
@@ -156,7 +164,8 @@ case ",${DEBUG}," in
 	fi
 	;;
     *,@(debug|${scriptName}),*)
-	{ printf >/dev/tty '%s: Will execute %s with DEBUG=%q\n' "$scriptName" "$(commandName --undefined 'passed command(s)' --eval "$commands")" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	setSink
+	printf '%s: Will execute %s with DEBUG=%q\n' "$scriptName" "$(commandName --undefined 'passed command(s)' --eval "$commands")" "${debuggee}${module:+:}${module}"
 	;;
 esac
 if [ "$isInvertMatch" ]; then
