@@ -5,14 +5,15 @@ shopt -qs globstar extglob nullglob
 : ${WITHDEBUG_EXEC_END=;}
 
 readonly DATA_DIRSPEC="${XDG_DATA_HOME:-${HOME}/.local/share}"
-readonly WITHDEBUG_RECALL_FILESPEC="${DATA_DIRSPEC}/withDebug"
+readonly WITHDEBUG_RECALL_FILESPEC="${DATA_DIRSPEC}/withDebug-recall"
+readonly WITHDEBUG_SAME_FILESPEC="${DATA_DIRSPEC}/withDebug-same"
 
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
     printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] (-l|--list-targets | [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|'' [-x ...]]) --[only-]for COMMANDNAME [--[only-]for ...] [-?|-h|--help] ..."
-    printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" "... [--same] -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
 printUsage()
@@ -89,7 +90,12 @@ HELPDESCRIPTION
     --exec CMD [...] ${WITHDEBUG_EXEC_END}	Execute CMD; all following arguments are taken to be
 			arguments to the CMD until an argument consisting of
 			'${WITHDEBUG_EXEC_END}' is encountered.
-    --recall		Rerun the previous debugging command, optionally
+    --same		Execute COMMAND with the same debugging options (but
+			unlike --recall not the actual COMMAND(s)) as the
+			previous invocation of withDebug, optionally dropping
+			matching arguments or adding those not given to the
+			original command.
+    --recall		Rerun the previous debugging COMMAND(s), optionally
 			dropping matching arguments or adding those not given to
 			the original command.
 HELPTEXT
@@ -198,6 +204,8 @@ addDebugCommand()
 handleStoredArguments()
 {
     local storedArgumentFilespec="${1:?}"; shift
+    local isKeepCommandArgs="${1?}"; shift
+
     if [ ! -r "$storedArgumentFilespec" ]; then
 	echo >&2 'ERROR: No previous debug command.'
 	exit 1
@@ -219,6 +227,7 @@ handleStoredArguments()
     typeset -A overrideModules=()
     typeset -A overrideOnlyModules=()
     typeset -A overrideExtensions=()
+    typeset -a commandArgs=()
     while [ $# -ne 0 ]
     do
 	case "$1" in
@@ -239,15 +248,22 @@ handleStoredArguments()
 	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
 	    --only-module|-M)	shift; overrideOnlyModules["$1"]=t; shift;;
 	    --extension|-x)	shift; overrideExtensions["$1"]=t; shift;;
-	    --)			shift; break;;
-	    *)			shift;;
+	    --command|-c)	commandArgs+=("$1" "$2"); shift; shift;;
+	    --exec)		commandArgs+=("$1"); shift
+				while [ $# -gt 0 -a "$1" != "$WITHDEBUG_EXEC_END" ]
+				do
+				    commandArgs+=("$1"); shift
+				done
+				commandArgs+=("$1"); shift
+				;;
+	    --)			commandArgs+=("$1"); shift; break;;
+	    *)			commandArgs+=("$1"); shift;;
 	esac
     done
 
     source "$storedArgumentFilespec" || exit 3
 
-    # Iterate over the previously given arguments to remove those also given to the
-    # recall.
+    # Iterate over the previously given arguments to remove those also given now.
     allargs=()	# These will be returned.
     while [ $# -ne 0 ]
     do
@@ -274,8 +290,8 @@ handleStoredArguments()
 	esac
     done
 
-    # Add those arguments given to the recall that were not used to remove any
-    # recalled arguments.
+    # Add those arguments given now (which were not used to remove any previous
+    # arguments).
     typeset -a newArgs=()
     [ "$overrideStdout" ] && newArgs+=(--stdout)
     [ "$overrideStderr" ] && newArgs+=(--stderr)
@@ -312,6 +328,7 @@ handleStoredArguments()
 
     # Return via allargs array.
     allargs=("${newArgs[@]}" "${allargs[@]}")
+    [ ! "$isKeepCommandArgs" ] || allargs+=("${commandArgs[@]}")
 }
 
 saveToInbox()
@@ -320,6 +337,7 @@ saveToInbox()
 }
 
 typeset -a allargs=("$@")
+typeset -a nonCommandArgs=()
 isIncludeStdout=
 isIncludeStderr=
 isAppend=
@@ -337,49 +355,50 @@ while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
-	--recall)	shift; handleStoredArguments "$WITHDEBUG_RECALL_FILESPEC" "$@"; set -- "${allargs[@]}";;
+	--same)		shift; handleStoredArguments "$WITHDEBUG_SAME_FILESPEC" t "$@"; set -- "${allargs[@]}";;
+	--recall)	shift; handleStoredArguments "$WITHDEBUG_RECALL_FILESPEC" '' "$@"; set -- "${allargs[@]}";;
 	--list-targets|-l)
-			# Note: Not covered by --recall.
+			# Note: Not covered by --same nor --recall.
 			shift
 			isListTargets=t; add debug
 			prePagerCommand=(pipethrough1 sort --unique)
 			;;
 
-	--stdout|-1)	shift; isIncludeStdout=t;;
-	--stderr|-2)	shift; isIncludeStderr=t;;
-	--append|-a)	shift; isAppend=t;;
-	--no-pager|-P)	shift; pager=();;
-	--to)		shift; sink="${1:?}"; shift;;
-	--inbox|-i)	shift; captureCommand=(saveToInbox); pager=();;
+	--stdout|-1)	nonCommandArgs+=("$1"); shift; isIncludeStdout=t;;
+	--stderr|-2)	nonCommandArgs+=("$1"); shift; isIncludeStderr=t;;
+	--append|-a)	nonCommandArgs+=("$1"); shift; isAppend=t;;
+	--no-pager|-P)	nonCommandArgs+=("$1"); shift; pager=();;
+	--to)		nonCommandArgs+=("$1" "$2"); shift; sink="${1:?}"; shift;;
+	--inbox|-i)	nonCommandArgs+=("$1"); shift; captureCommand=(saveToInbox); pager=();;
 	--to-separate-files|-s)
-			shift; sink='';;
-	--to-tty|-t)	shift; sink='/dev/tty'; pager=()
+			nonCommandArgs+=("$1"); shift; sink='';;
+	--to-tty|-t)	nonCommandArgs+=("$1"); shift; sink='/dev/tty'; pager=()
 			[ -n "${DEBUG_TIMESTAMP_COMMAND+t}" ] || export DEBUG_TIMESTAMP_COMMAND=''
 			;;
 	--no-timestamps|-T)
-			shift; export DEBUG_TIMESTAMP_COMMAND='';;
+			nonCommandArgs+=("$1"); shift; export DEBUG_TIMESTAMP_COMMAND='';;
 	--interactive|-I)
-			shift; isInteractive=t;;
-	--verbose|-v)	shift; isVerbose=t;;
-	--for)		shift
+			nonCommandArgs+=("$1"); shift; isInteractive=t;;
+	--verbose|-v)	nonCommandArgs+=("$1"); shift; isVerbose=t;;
+	--for)		nonCommandArgs+=("$1" "$2"); shift
 			addDebug "${1:?}"; shift
 			;;
-	--only-for)	shift
+	--only-for)	nonCommandArgs+=("$1" "$2"); shift
 			addDebug "${1:?}"; shift
 			isAddDebugCommand=
 			;;
-	--module|-m)	shift
+	--module|-m)	nonCommandArgs+=("$1" "$2"); shift
 			[ "$isOnly" ] && modules=('')
 			isOnly=
 			addModule "${1?}"; shift
 			;;
 	--only-module|-M)
-			shift
+			nonCommandArgs+=("$1" "$2"); shift
 			[ "$isOnly" ] || modules=()
 			isOnly=t
 			addModule "${1?}"; shift
 			;;
-	--extension|-x)	shift
+	--extension|-x)	nonCommandArgs+=("$1" "$2"); shift
 			if [ -z "${1?}" ]; then
 			    [ ${#extensions[@]} -eq 0 ] \
 				&& extensions+=('') \
@@ -413,7 +432,7 @@ do
 			addDebugCommand "$cmd" || exit 2
 			let commandCnt+=1
 			;;
-	--)		shift; break;;
+	--)		nonCommandArgs+=("$1"); shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
     esac
@@ -445,6 +464,8 @@ fi >&2
 
 printf -v quotedArgs ' %q' "${allargs[@]}"
 printf 'set --%s\n' "$quotedArgs" > "$WITHDEBUG_RECALL_FILESPEC"
+printf -v quotedArgs ' %q' "${nonCommandArgs[@]}"
+printf 'set --%s\n' "$quotedArgs" > "$WITHDEBUG_SAME_FILESPEC"
 
 if [ "$isVerbose" ]; then
     if [ $commandCnt -eq 1 ]; then
