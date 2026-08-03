@@ -93,10 +93,8 @@ printfToTerm()
 
 finally()
 {
-    if [ -s "$sink" ]; then
-	printfToTerm "%s%s'd to %q\\n" "$(debugNestingPrefix)" "$scriptName" "$sink"
-    elif [ -e "$sink" ]; then
-	# Clean up an empty debug log.
+    if [ -n "$toFile" -a ! -s "$sink" -a -e "$sink" ]; then
+	# Clean up an empty debug log explicitly set via --to FILE.
 	rm --force -- "$sink" || :
     fi
 }
