@@ -76,12 +76,12 @@ case ",${DEBUG}," in
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGLOG_SINK=",${DEBUG},"; DEBUGLOG_SINK="${DEBUGLOG_SINK#*,@(debug|${scriptName})=}"; DEBUGLOG_SINK="${DEBUGLOG_SINK%%,*}"
 			    ;;
-	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
 	sink="${DEBUGLOG_SINK-$DEBUG_SINK}"
 	case "$sink" in
-	    '')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
+	    '')		exec >&2;;
 	    \&+([0-9]))	eval "exec >$sink";;
 	    ?*)		exec >>"$sink";;
 	esac
