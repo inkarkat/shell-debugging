@@ -9,4 +9,5 @@ ${DEBUG:+eval $(debugtrace -p main -o $- -- "$@")}
 sleep 0.1
 trap 'echo EOF' EXIT
 "${scriptDir}/subordinate.sh" foo bar "$@"
+"${scriptDir}/subordinate.sh" gaga lala "$@"
 ${DEBUG:+eval $(debugtrace -p EOF --description 'end of script' -o $-)}

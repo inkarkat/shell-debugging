@@ -312,6 +312,7 @@ pagerCommand="${PAGER:-less}"
 [ "$pagerCommand" = smartless ] && pagerCommand=less	# smartless does not page small outputs that fit the terminal, but we explicitly want to page through the captured debug diagnostics.
 typeset -a captureCommand=()
 typeset -a pager=("$pagerCommand" --RAW-CONTROL-CHARS --)
+typeset -a prePagerCommand=()
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -319,7 +320,10 @@ do
 	--recall)	shift; handleRecall "$@"; set -- "${allargs[@]}";;
 	--list-targets|-l)
 			# Note: Not covered by --recall.
-			shift; isListTargets=t; add debug;;
+			shift
+			isListTargets=t; add debug
+			prePagerCommand=(pipethrough1 sort --unique)
+			;;
 
 	--stdout|-1)	shift; isIncludeStdout=t;;
 	--stderr|-2)	shift; isIncludeStderr=t;;
@@ -481,6 +485,7 @@ else
 	{
 	    [ "$isIncludeStdout" ] && exec 1>&4
 	    [ "$isIncludeStderr" ] && exec 2>&5
+	    [ ${#prePagerCommand[@]} -eq 0 ] || "${prePagerCommand[@]}" "$sink"
 	    "${pager[@]}" "$sink"
 	}
 	trap openPager EXIT
