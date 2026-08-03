@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|''] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] (-l|--list-targets | [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|'' [-x ...]]) --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -58,6 +58,9 @@ HELPDESCRIPTION
     --verbose|-v	Print the full command line (with all debugging
 			configuration) before executing it, in a format suitable
 			for copy-and-pasting it into the shell.
+    --list-targets|-l	Execute COMMAND while showing the COMMAND(s), MODULE(s),
+			and EXTENSION(s) that could be enabled; i.e. which debug
+			statements are actually hit and what they react on.
     --module|-m MODULE	Also enable debugging diagnostics for MODULE of the
 			following COMMAND(s).
     --only-module|-M MODULE
@@ -70,8 +73,12 @@ HELPDESCRIPTION
 			Append EXTENSION to the COMMANDNAME; e.g. a sigil like
 			"!" or a directive like "+=SUFFIX" that modify the
 			debugging behavior of some commands.
-    --extension|-x ''	Reset extensions; following COMMAND(s) just use the
-			plain COMMANDNAME as the debuggee.
+    --extension|-x ''	When given first: Also enable debugging diagnostics for
+			the plain COMMANDNAME without any extension in addition
+			to any following EXTENSION(s).
+			When given after another --extension: Reset extensions;
+			following COMMAND(s) just use the plain COMMANDNAME as
+			the debuggee.
     --for COMMANDNAME	Also enable debugging diagnostics and wrapper commands
 			for COMMANDNAME.
     --command|-c CMD	Execute CMD as a command-line.
@@ -95,17 +102,69 @@ add()
 {
     DEBUG+="${DEBUG:+,}${1:?}"
 }
+
+isListTargets=
 typeset -a commandNames=()
 addDebug()
 {
     commandName="${1:?}"; shift
     commandNames+=("$commandName")
 
+    [ "$isListTargets" ] && return 0
+
     local module; for module in "${modules[@]}"
     do
-	add "${commandName}${extension}${module:+:}${module}"
+	local extension; for extension in "${extensions[@]}"
+	do
+	    add "${commandName}${extension}${module:+:}${module}"
+	done
     done
 }
+
+hasTraceSupport()
+{
+    local commandFilespec="${1:?}"; shift
+    grep --quiet \
+	    -e '\${DEBUG:+eval \$(\(DEBUG[^[:space:]]\+[[:space:]]\+\)\?debugtrace[[:space:]]' \
+	    -- "$commandFilespec"
+}
+commands=
+addCommand()
+{
+    local cmd="${1:?}"; shift
+
+    local wrappers='' commandName isTraceCommand
+    for commandName in "${commandNames[@]}"
+    do
+	local module; for module in "${modules[@]}"
+	do
+	    local wrapperConfigName="DEBUG_${commandName//[^[:alnum:]]/_}${module:+_}${module//[^[:alnum:]]/_}_WRAPPER"
+	    if [ -n "${!wrapperConfigName}" ]; then
+		# Prepend the wrapper command to the executed command.
+		wrappers+="${!wrapperConfigName} "
+	    fi
+	done
+
+	contains "&${commandName}" "${extensions[@]}" && isTraceCommand=t
+    done
+
+    if contains '&' "${extensions[@]}" || [ "$isTraceCommand" ]; then
+	local commandFilespec="$(COMMANDNAME_WRAPPERS='' commandName --no-interpreter --full-filespec --eval "$cmd")"
+	if [ -n "$commandFilespec" ] \
+	    && [ -r "$commandFilespec" ] \
+	    && ! hasTraceSupport "$commandFilespec"
+	then
+	    if [ -n "$wrappers" ]; then
+		printf >&2 'Note: Cannot enable tracing for %s without built-in debugtrace support when a wrapper is configured.\n' "$commandFilespec"
+	    else
+		printf -v cmd '(BASH_ARGV0=%q; set -x; . %s)' "$commandFilespec" "$cmd"
+	    fi
+	fi
+    fi
+
+    commands+="${commands:+ $WITHDEBUG_COMMAND_JOINER }${wrappers}${cmd}"
+}
+
 programName=
 addDebugCommand()
 {
@@ -121,26 +180,7 @@ addDebugCommand()
     fi
 
     addDebug "$commandName"
-}
-
-addCommand()
-{
-    local cmd="${1:?}"; shift
-
-    local wrappers='' commandName
-    for commandName in "${commandNames[@]}"
-    do
-	local module; for module in "${modules[@]}"
-	do
-	    local wrapperConfigName="DEBUG_${commandName//[^[:alnum:]]/_}${module:+_}${module//[^[:alnum:]]/_}_WRAPPER"
-	    if [ -n "${!wrapperConfigName}" ]; then
-		# Prepend the wrapper command to the executed command.
-		wrappers+="${!wrapperConfigName} "
-	    fi
-	done
-    done
-
-    commands+="${commands:+ $WITHDEBUG_COMMAND_JOINER }${wrappers}${cmd}"
+    addCommand "$cmd"
 }
 
 handleRecall()
@@ -164,7 +204,7 @@ handleRecall()
     typeset -A overrideFor=()
     typeset -A overrideModules=()
     typeset -A overrideOnlyModules=()
-    local overrideExtension=
+    typeset -A overrideExtensions=()
     while [ $# -ne 0 ]
     do
 	case "$1" in
@@ -183,7 +223,7 @@ handleRecall()
 	    --for)		shift; overrideFor["$1"]=t; shift;;
 	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
 	    --only-module|-M)	shift; overrideOnlyModules["$1"]=t; shift;;
-	    --extension|-x)	shift; overrideExtension="$1"; shift;;
+	    --extension|-x)	shift; overrideExtensions["$1"]=t; shift;;
 	    --)			shift; break;;
 	    *)			shift;;
 	esac
@@ -212,7 +252,7 @@ handleRecall()
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["$2"]}" ] && unset "overrideModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --only-module|-M)   [ "${overrideOnlyModules["$2"]}" ] && unset "overrideOnlyModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
-	    --extension|-x)	[ -n "$overrideExtension" ] && overrideExtension= || allargs+=("$1" "$2"); shift; shift;;
+	    --extension|-x)	[ "${overrideExtensions["$2"]}" ] && unset "overrideExtension[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --)			allargs+=("$@"); break;;
 	    *)			allargs+=("$1"); shift;;
 	esac
@@ -245,7 +285,10 @@ handleRecall()
     do
 	newArgs+=(--only-module "$arg")
     done
-    [ -n "$overrideExtension" ] && newArgs+=(--extension "$overrideExtension")
+    for arg in "${!overrideExtensions[@]}"
+    do
+	newArgs+=(--extension "$arg")
+    done
 
     # Return via allargs array.
     allargs=("${newArgs[@]}" "${allargs[@]}")
@@ -262,18 +305,25 @@ isIncludeStderr=
 isAppend=
 isInteractive=
 isVerbose=
-commands=
+typeset -a extensions=()
 let commandCnt=0
 unset sink
 pagerCommand="${PAGER:-less}"
 [ "$pagerCommand" = smartless ] && pagerCommand=less	# smartless does not page small outputs that fit the terminal, but we explicitly want to page through the captured debug diagnostics.
 typeset -a captureCommand=()
 typeset -a pager=("$pagerCommand" --RAW-CONTROL-CHARS --)
+typeset -a prePagerCommand=()
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--recall)	shift; handleRecall "$@"; set -- "${allargs[@]}";;
+	--list-targets|-l)
+			# Note: Not covered by --recall.
+			shift
+			isListTargets=t; add debug
+			prePagerCommand=(pipethrough1 sort --unique)
+			;;
 
 	--stdout|-1)	shift; isIncludeStdout=t;;
 	--stderr|-2)	shift; isIncludeStderr=t;;
@@ -305,10 +355,17 @@ do
 			isOnly=t
 			addModule "${1?}"; shift
 			;;
-	--extension|-x)	shift; extension="${1?}"; shift;;
+	--extension|-x)	shift
+			if [ -z "${1?}" ]; then
+			    [ ${#extensions[@]} -eq 0 ] \
+				&& extensions+=('') \
+				|| extensions=()
+			else
+			    extensions+=("$1")
+			fi; shift
+			;;
 	--command|-c)	shift
 			addDebugCommand "${1:?}" || exit 2
-			addCommand "$1"
 			if [[ "$1" =~ [\;\&\|] ]]; then
 			    let commandCnt+=2	# multiple commands
 			else
@@ -330,7 +387,6 @@ do
 			fi >&2
 			shift
 			addDebugCommand "$cmd" || exit 2
-			addCommand "$cmd"
 			let commandCnt+=1
 			;;
 	--)		shift; break;;
@@ -344,7 +400,6 @@ if [ $# -ne 0 ]; then
     printf -v quotedSimpleCommand '%q ' "$@"
     quotedSimpleCommand="${quotedSimpleCommand% }"
     addDebugCommand "$quotedSimpleCommand" || exit 2
-    addCommand "$quotedSimpleCommand"
     if [ "${#commandNames[@]}" -gt 1 ]; then
 	# Use the trailing SIMPLECOMMAND as the command name for the log file, not the
 	# first --command|--exec COMMAND.
@@ -430,6 +485,7 @@ else
 	{
 	    [ "$isIncludeStdout" ] && exec 1>&4
 	    [ "$isIncludeStderr" ] && exec 2>&5
+	    [ ${#prePagerCommand[@]} -eq 0 ] || "${prePagerCommand[@]}" "$sink"
 	    "${pager[@]}" "$sink"
 	}
 	trap openPager EXIT

@@ -72,9 +72,17 @@ fi
 "$@"
 status=$?
 
-printfToTerm()
+unset sink
+setSink()
 {
-    { printf >/dev/tty "$@"; } 2>/dev/null
+    [ -n "${sink+t}" ] && return 0
+
+    sink="${DUMPSTATUS_SINK:-${isOnDebug:+$DEBUG_SINK}}"
+    case "$sink" in
+	'')		exec >&2;;
+	\&+([0-9]))	eval "exec >$sink";;
+	?*)		exec >>"$sink";;
+    esac
 }
 
 if [ "$isOnDebug" ]; then
@@ -98,18 +106,14 @@ if [ "$isOnDebug" ]; then
 	    esac
 	    ;;
 	*,@(debug|${scriptName}),*)
-	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    setSink
+	    printf '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
 	*)  exit 99;;
     esac
 fi
 
-sink="${DUMPSTATUS_SINK:-${isOnDebug:+$DEBUG_SINK}}"
-case "$sink" in
-    '')		exec >&2;;
-    \&+([0-9]))	eval "exec >$sink";;
-    ?*)		exec >>"$sink";;
-esac
+setSink
 
 [ $# -gt 0 ] || exit 1
 

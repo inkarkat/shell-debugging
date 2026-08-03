@@ -139,9 +139,17 @@ do
     esac
 done
 
-printfToTerm()
+unset sink
+setSink()
 {
-    { printf >/dev/tty "$@"; } 2>/dev/null
+    [ -n "${sink+t}" ] && return 0
+
+    sink="${DUMPARGS_SINK:-${isOnDebug:+$DEBUG_SINK}}"
+    case "$sink" in
+	'')		exec >&2;;
+	\&+([0-9]))	eval "exec >$sink";;
+	?*)		exec >>"$sink";;
+    esac
 }
 
 timestampPrefix=
@@ -167,19 +175,15 @@ if [ "$isOnDebug" ]; then
 	    timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
 	    ;;
 	*,@(debug|${scriptName}),*)
-	    printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    setSink
+	    printf '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    exit 99
 	    ;;
 	*)  exit 99;;
     esac
 fi
 
-sink="${DUMPARGS_SINK:-${isOnDebug:+$DEBUG_SINK}}"
-case "$sink" in
-    '')		exec >&2;;
-    \&+([0-9]))	eval "exec >$sink";;
-    ?*)		exec >>"$sink";;
-esac
+setSink
 
 if [ "$isVerbose" ]; then
     if [ $# -gt 0 ]; then

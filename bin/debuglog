@@ -62,6 +62,19 @@ done
 
 [ -n "$DEBUG" ] || exit 0
 
+unset sink
+setSink()
+{
+    [ -n "${sink+t}" ] && return 0
+
+    sink="${DEBUGLOG_SINK-$DEBUG_SINK}"
+    case "$sink" in
+	'')		exec >&2;;
+	\&+([0-9]))	eval "exec >$sink";;
+	?*)		exec >>"$sink";;
+    esac
+}
+
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
     {
@@ -76,15 +89,10 @@ case ",${DEBUG}," in
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGLOG_SINK=",${DEBUG},"; DEBUGLOG_SINK="${DEBUGLOG_SINK#*,@(debug|${scriptName})=}"; DEBUGLOG_SINK="${DEBUGLOG_SINK%%,*}"
 			    ;;
-	    *)		    : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
-	sink="${DEBUGLOG_SINK-$DEBUG_SINK}"
-	case "$sink" in
-	    '')		echo >&2 'ASSERT: Sink is non-empty.'; exit 3;;
-	    \&+([0-9]))	eval "exec >$sink";;
-	    ?*)		exec >>"$sink";;
-	esac
+	setSink
 
 	[ -n "${DEBUG_TIMESTAMP_COMMAND+t}" ] && export LOG_TIMESTAMP_COMMAND="$DEBUG_TIMESTAMP_COMMAND"
 	if [ "$isLogF" ]; then
@@ -94,7 +102,8 @@ case ",${DEBUG}," in
 	fi
 	;;
     *,@(debug|${scriptName}),*)
-	{ printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	setSink
+	printf '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;;
 esac
 exit 0

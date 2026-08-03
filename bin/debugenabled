@@ -73,6 +73,19 @@ done
 
 [ -n "$DEBUG" ] || exit $disabledStatus
 
+unset sink
+setSink()
+{
+    [ -n "${sink+t}" ] && return 0
+
+    sink="${DEBUGENABLED_SINK-$DEBUG_SINK}" # Note: Don't consider --to FILE here.
+    case "$sink" in
+	'')		exec >&2;;
+	\&+([0-9]))	eval "exec >$sink";;
+	?*)		exec >>"$sink";;
+    esac
+}
+
 printSink()
 {
     sink="${toFile-${DEBUGENABLED_SINK-$DEBUG_SINK}}"
@@ -105,7 +118,8 @@ case ",${DEBUG}," in
 	exit $enabledStatus
 	;;
     *,@(debug|${scriptName}),*)
-	{ printf >/dev/tty '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	setSink
+	printf '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;;
 esac
 exit $disabledStatus
