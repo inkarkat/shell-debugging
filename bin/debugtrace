@@ -107,9 +107,9 @@ do
 done
 [ -n "$DEBUG" ] || exit 0
 
-printfToTerm()
+printfToSink()
 {
-    { printf >/dev/tty "$@"; } 2>/dev/null
+    eval "printf \"\$@\" $redir"
 }
 
 logActions()
@@ -176,7 +176,7 @@ case ",${DEBUG}," in
 	predicate=",${DEBUG},"; predicate="${predicate#*,${debuggee}\?}"; predicate="${predicate%%${module:+:}${module},*}"
 	if [ -z "$predicate" ]; then
 	    isActive=t
-	    printfToTerm '%s: Warning: Empty PREDICATE given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    printfToSink '%s: Warning: Empty PREDICATE given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	elif eval "(${sinkRedir}; { ${predicate}; } >&3 2>&3)"; then
 	    isActive=t
 	else
@@ -189,7 +189,7 @@ case ",${DEBUG}," in
 	isActive=t
 	otherCommand=",${DEBUG},"; otherCommand="${otherCommand#*,${debuggee}=}"; otherCommand="${otherCommand%%${module:+:}${module},*}"
 	if [ -z "$otherCommand" ]; then
-	    printfToTerm '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    printfToSink '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	else
 	    actions+=("injecting $otherCommand")
 	    commands+="${commands:+; }${otherCommand}"
@@ -213,10 +213,10 @@ case ",${DEBUG}," in
 		printf -v commands '%scat %q%s' "${commands}${commands:+; }" "$filespec" "; exit${exitStatus:+ }${exitStatus}"
 		export PS4='@ '
 	    else
-		printfToTerm '%s: Warning: Non-existing FILE given for %q; ignoring: %s\n' "$scriptName" "${debuggee}${module:+:}${module}" "$filespec"
+		printfToSink '%s: Warning: Non-existing FILE given for %q; ignoring: %s\n' "$scriptName" "${debuggee}${module:+:}${module}" "$filespec"
 	    fi
 	else
-	    printfToTerm '%s: Warning: No FILE given for %q; ignoring.\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    printfToSink '%s: Warning: No FILE given for %q; ignoring.\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	fi
 	;;
 esac
@@ -228,7 +228,7 @@ case ",${DEBUG}," in
 	    quotedArgs=; if [ $# -gt 0 ]; then printf -v quotedArgs '%q ' "$@"; quotedArgs="${quotedArgs% }"; fi
 	    O="${DEBUGTRACE_ARGQUOTES:0:1}"; C="${DEBUGTRACE_ARGQUOTES:1:1}"
 	    if [ -z "$subst" ]; then
-		printfToTerm '%s: Warning: Empty PATTERN/REPLACEMENT given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+		printfToSink '%s: Warning: Empty PATTERN/REPLACEMENT given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    elif [[ "$subst" = /* ]]; then
 		[ -n "$quotedArgs" ] \
 		    && actions+=("replacing arguments ${O}${quotedArgs}${C} with ${O}${subst#/}${C}") \
@@ -294,7 +294,7 @@ else
     case ",${DEBUG}," in
 	*,@(debug|${scriptName}),*)
 	    quotedModule=; [ -n "$module" ] && printf -v quotedModule %q "$module"
-	    printfToTerm '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" '[![N]|&'"$tracePointName"'|=OTHER-COMMAND|@[N-]FILE|/[[PATTERN]/]REPLACEMENT/|?PREDICATE]' "${module:+:}${quotedModule}"
+	    printfToSink '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" '[![N]|&'"$tracePointName"'|=OTHER-COMMAND|@[N-]FILE|/[[PATTERN]/]REPLACEMENT/|?PREDICATE]' "${module:+:}${quotedModule}"
 	    ;;
     esac
 fi

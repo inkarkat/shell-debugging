@@ -86,17 +86,21 @@ fi
 
 [ -n "$DEBUG" ] || exec cat
 
-printfToTerm()
-{
-    { printf >/dev/tty "$@"; } 2>/dev/null
-}
-
 finally()
 {
     if [ -n "$toFile" -a ! -s "$sink" -a -e "$sink" ]; then
 	# Clean up an empty debug log explicitly set via --to FILE.
 	rm --force -- "$sink" || :
     fi
+}
+
+printfToSink()
+{
+    case "$sink" in
+	'')		printf "$@" >&2;;
+	\&+([0-9]))	eval "printf \"\$@\" >$sink";;
+	?*)		printf "$@" >>"$sink";;
+    esac
 }
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
@@ -121,12 +125,7 @@ case ",${DEBUG}," in
 	if [ -n "$toFile" ]; then
 	    # Log the reference in the debug file.
 	    timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
-	    printf -v reference '%s%s Logged to %s\n' "${timestampPrefix}${timestampPrefix:+ }" "$debuggee (${module}${module:+, }${PPID})" "$toFile"
-	    case "$sink" in
-		'')		printf '%s\n' "$reference" >&2;;
-		\&+([0-9]))	eval "printf '%s\n' \"\$reference\" >$sink";;
-		?*)		printf '%s\n' "$reference" >>"$sink";;
-	    esac
+	    printfToSink '%s%s Logged to %s\n' "${timestampPrefix}${timestampPrefix:+ }" "$debuggee (${module}${module:+, }${PPID})" "$toFile"
 
 	    # Redirect the captured output to the specified FILE.
 	    sink="$toFile"
@@ -145,7 +144,7 @@ case ",${DEBUG}," in
 	tee ${isAppend:+--append} -- "$sink"
 	;;
     *,@(debug|${scriptName}),*)
-	printfToTerm '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	printfToSink '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;&
     *)	exec cat
 esac

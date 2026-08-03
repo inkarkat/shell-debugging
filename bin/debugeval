@@ -132,9 +132,9 @@ if [ -z "$DEBUG" ]; then
     exit 0
 fi
 
-printfToTerm()
+printfToSink()
 {
-    { printf >/dev/tty "$@"; } 2>/dev/null
+    eval "printf \"\$@\" $redir"
 }
 
 logCommands()
@@ -207,7 +207,7 @@ case ",${DEBUG}," in
 	predicate=",${DEBUG},"; predicate="${predicate#*,${debuggee}\?}"; predicate="${predicate%%${module:+:}${module},*}"
 	if [ -z "$predicate" ]; then
 	    isActive=t
-	    printfToTerm '%s: Warning: Empty PREDICATE given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    printfToSink '%s: Warning: Empty PREDICATE given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	elif eval "(${sinkRedir}; { ${predicate}; } >&3 2>&3)"; then
 	    isActive=t
 	else
@@ -241,7 +241,7 @@ case ",${DEBUG}," in
 	isActive=t
 	commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
 	export PS4='= '
-	[ -z "$commands" ] && printfToTerm '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	[ -z "$commands" ] && printfToSink '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	;;
     *,${debuggee}@*([^:,])${module:+:}${module},*)
 	filespec=",${DEBUG},"; filespec="${filespec#*,${debuggee}@}"; filespec="${filespec%%${module:+:}${module},*}"
@@ -257,10 +257,10 @@ case ",${DEBUG}," in
 		printf -v commands 'cat %q%s' "$filespec" "${exitStatus:+; exit $exitStatus}"
 		export PS4='@ '
 	    else
-		printfToTerm '%s: Warning: Non-existing FILE given for %q; ignoring: %s\n' "$scriptName" "${debuggee}${module:+:}${module}" "$filespec"
+		printfToSink '%s: Warning: Non-existing FILE given for %q; ignoring: %s\n' "$scriptName" "${debuggee}${module:+:}${module}" "$filespec"
 	    fi
 	else
-	    printfToTerm '%s: Warning: No FILE given for %q; ignoring.\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    printfToSink '%s: Warning: No FILE given for %q; ignoring.\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	fi
 	;;
 esac
@@ -272,7 +272,7 @@ if [ -z "$action" ]; then
 	    isActive=t
 	    prefix=",${DEBUG},"; prefix="${prefix#*,${debuggee}^=}"; prefix="${prefix%%${module:+:}${module},*}"
 	    commands="${prefix}${commands}"
-	    [ -z "$prefix" ] && printfToTerm '%s: Warning: Empty PREFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    [ -z "$prefix" ] && printfToSink '%s: Warning: Empty PREFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
     case ",${DEBUG}," in
@@ -280,7 +280,7 @@ if [ -z "$action" ]; then
 	    isActive=t
 	    suffix=",${DEBUG},"; suffix="${suffix#*,${debuggee}+=}"; suffix="${suffix%%${module:+:}${module},*}"
 	    commands+="$suffix"
-	    [ -z "$suffix" ] && printfToTerm '%s: Warning: Empty SUFFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    [ -z "$suffix" ] && printfToSink '%s: Warning: Empty SUFFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    ;;
     esac
 fi
@@ -293,7 +293,7 @@ else
     case ",${DEBUG}," in
 	*,@(debug|${scriptName}),*)
 	    quotedModule=; [ -n "$module" ] && printf -v quotedModule %q "$module"
-	    printfToTerm '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" '[!|&|~|=OTHER-COMMAND|@[N-]FILE|^=PREFIX|+=SUFFIX|?PREDICATE]' "${module:+:}${quotedModule}"
+	    printfToSink '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" '[!|&|~|=OTHER-COMMAND|@[N-]FILE|^=PREFIX|+=SUFFIX|?PREDICATE]' "${module:+:}${quotedModule}"
 	    ;;
     esac
 

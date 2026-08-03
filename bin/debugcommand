@@ -112,13 +112,18 @@ if [ -z "$DEBUG" ]; then
     exit $?
 fi
 
-setSinkAndExecute()
+setSinkDefaults()
 {
     case ",${DEBUG}," in
 	*,@(debug|${scriptName})=*,*)
 	    DEBUGCOMMAND_SINK=",${DEBUG},"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK#*,@(debug|${scriptName})=}"; DEBUGCOMMAND_SINK="${DEBUGCOMMAND_SINK%%,*}"
 	    ;;
     esac
+}
+
+setSinkAndExecute()
+{
+    setSinkDefaults
 
     if [ -n "${DEBUGCOMMAND_IFS+t}" ]; then
 	export VERBOSE_IFS="$DEBUGCOMMAND_IFS"
@@ -159,7 +164,13 @@ case ",${DEBUG}," in
 	setSinkAndExecute "$@"
 	;;
     *,@(debug|${scriptName}|verbose),*)
-	{ printf >/dev/tty '%s: Will log [and skip] command execution with DEBUG=%q[!]\n' "$scriptName" "${debuggee}${module:+:}${module}"; } 2>/dev/null
+	setSinkDefaults; sink="${DEBUGCOMMAND_SINK-$DEBUG_SINK}"
+	case "$sink" in
+	    '')		exec >&2;;
+	    \&+([0-9]))	eval "exec >$sink";;
+	    ?*)		exec >>"$sink";;
+	esac
+	printf '%s: Will log [and skip] command execution with DEBUG=%q[!]\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
 	;;
 esac
