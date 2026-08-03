@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] (-l|--list-targets | [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|'' [-x ...]]) --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] (-l|--list-targets | [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|'' [-x ...]]) --[only-]for COMMANDNAME [--[only-]for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -81,6 +81,10 @@ HELPDESCRIPTION
 			the debuggee.
     --for COMMANDNAME	Also enable debugging diagnostics and wrapper commands
 			for COMMANDNAME.
+    --only-for COMMANDNAME
+			Just enable debugging diagnostics and wrapper commands
+			for COMMANDNAME, but not for any following --command or
+			--exec COMMAND(s) or [--] SIMPLECOMMAND.
     --command|-c CMD	Execute CMD as a command-line.
     --exec CMD [...] ${WITHDEBUG_EXEC_END}	Execute CMD; all following arguments are taken to be
 			arguments to the CMD until an argument consisting of
@@ -172,6 +176,7 @@ addCommand()
     commands+="${commands:+ $WITHDEBUG_COMMAND_JOINER }${wrappers}${cmd}"
 }
 
+isAddDebugCommand=t
 programName=
 addDebugCommand()
 {
@@ -186,8 +191,8 @@ addDebugCommand()
 	: ${programName:=$commandName}
     fi
 
-    addDebug "$commandName"
-    addCommand "$cmd" t
+    [ ! "$isAddDebugCommand" ] || addDebug "$commandName"
+    addCommand "$cmd" "$isAddDebugCommand"
 }
 
 handleRecall()
@@ -209,6 +214,7 @@ handleRecall()
     local overrideNoTimestamps=
     local overrideTo=
     typeset -A overrideFor=()
+    typeset -A overrideOnlyFor=()
     typeset -A overrideModules=()
     typeset -A overrideOnlyModules=()
     typeset -A overrideExtensions=()
@@ -228,6 +234,7 @@ handleRecall()
 	    --no-timestamps|-T)	shift; overrideNoTimestamps=t;;
 	    --to)		shift; overrideTo="$1"; shift;;
 	    --for)		shift; overrideFor["$1"]=t; shift;;
+	    --only-for)		shift; overrideOnlyFor["$1"]=t; shift;;
 	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
 	    --only-module|-M)	shift; overrideOnlyModules["$1"]=t; shift;;
 	    --extension|-x)	shift; overrideExtensions["$1"]=t; shift;;
@@ -257,6 +264,7 @@ handleRecall()
 	    --no-timestamps|-T)	[ "$overrideNoTimestamps" ] && overrideNoTimestamps= || allargs+=("$1"); shift;;
 	    --to)		[ -n "$overrideTo" ] && overrideTo= || allargs+=("$1" "$2"); shift; shift;;
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
+	    --only-for)		[ "${overrideOnlyFor["$2"]}" ] && unset "overrideOnlyFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["$2"]}" ] && unset "overrideModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --only-module|-M)   [ "${overrideOnlyModules["$2"]}" ] && unset "overrideOnlyModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --extension|-x)	[ "${overrideExtensions["$2"]}" ] && unset "overrideExtension[$2]" || allargs+=("$1" "$2"); shift; shift;;
@@ -283,6 +291,10 @@ handleRecall()
     for arg in "${!overrideFor[@]}"
     do
 	newArgs+=(--for "$arg")
+    done
+    for arg in "${!overrideOnlyFor[@]}"
+    do
+	newArgs+=(--only-for "$arg")
     done
     for arg in "${!overrideModules[@]}"
     do
@@ -350,6 +362,10 @@ do
 	--verbose|-v)	shift; isVerbose=t;;
 	--for)		shift
 			addDebug "${1:?}"; shift
+			;;
+	--only-for)	shift
+			addDebug "${1:?}"; shift
+			isAddDebugCommand=
 			;;
 	--module|-m)	shift
 			[ "$isOnly" ] && modules=('')
