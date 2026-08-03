@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|''] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|'' [-x ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -70,8 +70,12 @@ HELPDESCRIPTION
 			Append EXTENSION to the COMMANDNAME; e.g. a sigil like
 			"!" or a directive like "+=SUFFIX" that modify the
 			debugging behavior of some commands.
-    --extension|-x ''	Reset extensions; following COMMAND(s) just use the
-			plain COMMANDNAME as the debuggee.
+    --extension|-x ''	When given first: Also enable debugging diagnostics for
+			the plain COMMANDNAME without any extension in addition
+			to any following EXTENSION(s).
+			When given after another --extension: Reset extensions;
+			following COMMAND(s) just use the plain COMMANDNAME as
+			the debuggee.
     --for COMMANDNAME	Also enable debugging diagnostics and wrapper commands
 			for COMMANDNAME.
     --command|-c CMD	Execute CMD as a command-line.
@@ -104,7 +108,10 @@ addDebug()
 
     local module; for module in "${modules[@]}"
     do
-	add "${commandName}${extension}${module:+:}${module}"
+	local extension; for extension in "${extensions[@]}"
+	do
+	    add "${commandName}${extension}${module:+:}${module}"
+	done
     done
 }
 
@@ -132,10 +139,10 @@ addCommand()
 	    fi
 	done
 
-	[ "$extension" = "&${commandName}" ] && isTraceCommand=t
+	contains "&${commandName}" "${extensions[@]}" && isTraceCommand=t
     done
 
-    if [ "$extension" = '&' ] || [ "$isTraceCommand" ]; then
+    if contains '&' "${extensions[@]}" || [ "$isTraceCommand" ]; then
 	local commandFilespec="$(COMMANDNAME_WRAPPERS='' commandName --no-interpreter --full-filespec --eval "$cmd")"
 	if [ -n "$commandFilespec" ] \
 	    && [ -r "$commandFilespec" ] \
@@ -191,7 +198,7 @@ handleRecall()
     typeset -A overrideFor=()
     typeset -A overrideModules=()
     typeset -A overrideOnlyModules=()
-    local overrideExtension=
+    typeset -A overrideExtensions=()
     while [ $# -ne 0 ]
     do
 	case "$1" in
@@ -210,7 +217,7 @@ handleRecall()
 	    --for)		shift; overrideFor["$1"]=t; shift;;
 	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
 	    --only-module|-M)	shift; overrideOnlyModules["$1"]=t; shift;;
-	    --extension|-x)	shift; overrideExtension="$1"; shift;;
+	    --extension|-x)	shift; overrideExtensions["$1"]=t; shift;;
 	    --)			shift; break;;
 	    *)			shift;;
 	esac
@@ -239,7 +246,7 @@ handleRecall()
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["$2"]}" ] && unset "overrideModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --only-module|-M)   [ "${overrideOnlyModules["$2"]}" ] && unset "overrideOnlyModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
-	    --extension|-x)	[ -n "$overrideExtension" ] && overrideExtension= || allargs+=("$1" "$2"); shift; shift;;
+	    --extension|-x)	[ "${overrideExtensions["$2"]}" ] && unset "overrideExtension[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --)			allargs+=("$@"); break;;
 	    *)			allargs+=("$1"); shift;;
 	esac
@@ -272,7 +279,10 @@ handleRecall()
     do
 	newArgs+=(--only-module "$arg")
     done
-    [ -n "$overrideExtension" ] && newArgs+=(--extension "$overrideExtension")
+    for arg in "${!overrideExtensions[@]}"
+    do
+	newArgs+=(--extension "$arg")
+    done
 
     # Return via allargs array.
     allargs=("${newArgs[@]}" "${allargs[@]}")
@@ -289,6 +299,7 @@ isIncludeStderr=
 isAppend=
 isInteractive=
 isVerbose=
+typeset -a extensions=()
 let commandCnt=0
 unset sink
 pagerCommand="${PAGER:-less}"
@@ -331,7 +342,15 @@ do
 			isOnly=t
 			addModule "${1?}"; shift
 			;;
-	--extension|-x)	shift; extension="${1?}"; shift;;
+	--extension|-x)	shift
+			if [ -z "${1?}" ]; then
+			    [ ${#extensions[@]} -eq 0 ] \
+				&& extensions+=('') \
+				|| extensions=()
+			else
+			    extensions+=("$1")
+			fi; shift
+			;;
 	--command|-c)	shift
 			addDebugCommand "${1:?}" || exit 2
 			if [[ "$1" =~ [\;\&\|] ]]; then
