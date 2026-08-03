@@ -462,10 +462,12 @@ elif [ -z "$commands" ]; then
     exit 2
 fi >&2
 
-printf -v quotedArgs ' %q' "${allargs[@]}"
-printf 'set --%s\n' "$quotedArgs" > "$WITHDEBUG_RECALL_FILESPEC"
-printf -v quotedArgs ' %q' "${nonCommandArgs[@]}"
-printf 'set --%s\n' "$quotedArgs" > "$WITHDEBUG_SAME_FILESPEC"
+if [ ! "$isListTargets" ]; then
+    printf -v quotedArgs ' %q' "${allargs[@]}"
+    printf 'set --%s\n' "$quotedArgs" > "$WITHDEBUG_RECALL_FILESPEC"
+    printf -v quotedArgs ' %q' "${nonCommandArgs[@]}"
+    printf 'set --%s\n' "$quotedArgs" > "$WITHDEBUG_SAME_FILESPEC"
+fi
 
 if [ "$isVerbose" ]; then
     if [ $commandCnt -eq 1 ]; then
