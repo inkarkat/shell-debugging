@@ -11,7 +11,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|'' [-x ...]] --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] (-l|--list-targets | [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|'' [-x ...]]) --for COMMANDNAME [--for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -58,6 +58,9 @@ HELPDESCRIPTION
     --verbose|-v	Print the full command line (with all debugging
 			configuration) before executing it, in a format suitable
 			for copy-and-pasting it into the shell.
+    --list-targets|-l	Execute COMMAND while showing the COMMAND(s), MODULE(s),
+			and EXTENSION(s) that could be enabled; i.e. which debug
+			statements are actually hit and what they react on.
     --module|-m MODULE	Also enable debugging diagnostics for MODULE of the
 			following COMMAND(s).
     --only-module|-M MODULE
@@ -100,11 +103,14 @@ add()
     DEBUG+="${DEBUG:+,}${1:?}"
 }
 
+isListTargets=
 typeset -a commandNames=()
 addDebug()
 {
     commandName="${1:?}"; shift
     commandNames+=("$commandName")
+
+    [ "$isListTargets" ] && return 0
 
     local module; for module in "${modules[@]}"
     do
@@ -311,6 +317,9 @@ do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--recall)	shift; handleRecall "$@"; set -- "${allargs[@]}";;
+	--list-targets|-l)
+			# Note: Not covered by --recall.
+			shift; isListTargets=t; add debug;;
 
 	--stdout|-1)	shift; isIncludeStdout=t;;
 	--stderr|-2)	shift; isIncludeStderr=t;;
