@@ -136,32 +136,35 @@ commands=
 addCommand()
 {
     local cmd="${1:?}"; shift
+    local isDebugEnable="${1?}"; shift
 
-    local wrappers='' commandName isTraceCommand
-    for commandName in "${commandNames[@]}"
-    do
-	local module; for module in "${modules[@]}"
+    if [ "$isDebugEnable" ]; then
+	local wrappers='' commandName isTraceCommand
+	for commandName in "${commandNames[@]}"
 	do
-	    local wrapperConfigName="DEBUG_${commandName//[^[:alnum:]]/_}${module:+_}${module//[^[:alnum:]]/_}_WRAPPER"
-	    if [ -n "${!wrapperConfigName}" ]; then
-		# Prepend the wrapper command to the executed command.
-		wrappers+="${!wrapperConfigName} "
-	    fi
+	    local module; for module in "${modules[@]}"
+	    do
+		local wrapperConfigName="DEBUG_${commandName//[^[:alnum:]]/_}${module:+_}${module//[^[:alnum:]]/_}_WRAPPER"
+		if [ -n "${!wrapperConfigName}" ]; then
+		    # Prepend the wrapper command to the executed command.
+		    wrappers+="${!wrapperConfigName} "
+		fi
+	    done
+
+	    contains "&${commandName}" "${extensions[@]}" && isTraceCommand=t
 	done
 
-	contains "&${commandName}" "${extensions[@]}" && isTraceCommand=t
-    done
-
-    if contains '&' "${extensions[@]}" || [ "$isTraceCommand" ]; then
-	local commandFilespec="$(COMMANDNAME_WRAPPERS='' commandName --no-interpreter --full-filespec --eval "$cmd")"
-	if [ -n "$commandFilespec" ] \
-	    && [ -r "$commandFilespec" ] \
-	    && ! hasTraceSupport "$commandFilespec"
-	then
-	    if [ -n "$wrappers" ]; then
-		printf >&2 'Note: Cannot enable tracing for %s without built-in debugtrace support when a wrapper is configured.\n' "$commandFilespec"
-	    else
-		printf -v cmd '(BASH_ARGV0=%q; set -x; . %s)' "$commandFilespec" "$cmd"
+	if contains '&' "${extensions[@]}" || [ "$isTraceCommand" ]; then
+	    local commandFilespec="$(COMMANDNAME_WRAPPERS='' commandName --no-interpreter --full-filespec --eval "$cmd")"
+	    if [ -n "$commandFilespec" ] \
+		&& [ -r "$commandFilespec" ] \
+		&& ! hasTraceSupport "$commandFilespec"
+	    then
+		if [ -n "$wrappers" ]; then
+		    printf >&2 'Note: Cannot enable tracing for %s without built-in debugtrace support when a wrapper is configured.\n' "$commandFilespec"
+		else
+		    printf -v cmd '(BASH_ARGV0=%q; set -x; . %s)' "$commandFilespec" "$cmd"
+		fi
 	    fi
 	fi
     fi
@@ -184,7 +187,7 @@ addDebugCommand()
     fi
 
     addDebug "$commandName"
-    addCommand "$cmd"
+    addCommand "$cmd" t
 }
 
 handleRecall()
