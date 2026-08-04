@@ -4,6 +4,11 @@ shopt -qs extglob
 : ${DEBUGTRACE_ARGQUOTES=「」}
 O="${DEBUGTRACE_ARGQUOTES:0:1}"; C="${DEBUGTRACE_ARGQUOTES:1:1}"
 
+readonly scriptDir="$([ "${BASH_SOURCE[0]}" ] && dirname -- "${BASH_SOURCE[0]}" || exit 3)"
+[ -d "$scriptDir" ] || { echo >&2 'ERROR: Cannot determine script directory!'; exit 3; }
+readonly projectDir="${scriptDir}/.."
+readonly libDir="${projectDir}/lib"
+
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
@@ -108,6 +113,8 @@ do
 done
 [ -n "$DEBUG" ] || exit 0
 
+source "${libDir}/directiveParser.sh" || exit 3
+
 printfToSink()
 {
     eval "printf \"\$@\" $redir"
@@ -166,27 +173,6 @@ handleToFile()
     commands="${commands/"${originalTraceRedir}"/"${traceRedir}"}"
 
     toFile=''	# No-op if the function is called again.
-}
-
-unset remainingDebug
-debugConsumeDirectiveInto()
-{
-    local -n directiveRef="${1:?}"; shift
-    local sigil="${1:?}"; shift
-    [ -n "${remainingDebug+t}" ] || remainingDebug=",${DEBUG},"
-
-    case "$remainingDebug" in
-	*,"${debuggee}${sigil}"*([^:,])"${module:+:}${module}",*)
-	    directiveRef=",${remainingDebug},"; directiveRef="${directiveRef#*,${debuggee}${sigil}}"; directiveRef="${directiveRef%%${module:+:}${module},*}"
-	    remainingDebug="${remainingDebug/",${debuggee}${sigil}${directiveRef}${module:+:}${module},"/,}"
-	    return 0
-	    ;;
-
-	*)
-	    unset remainingDebug
-	    return 1
-	    ;;
-    esac
 }
 
 commands=
