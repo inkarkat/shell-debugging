@@ -1,6 +1,11 @@
 #!/bin/bash
 shopt -qs extglob
 
+readonly scriptDir="$([ "${BASH_SOURCE[0]}" ] && dirname -- "${BASH_SOURCE[0]}" || exit 3)"
+[ -d "$scriptDir" ] || { echo >&2 'ERROR: Cannot determine script directory!'; exit 3; }
+readonly projectDir="${scriptDir}/.."
+readonly libDir="${projectDir}/lib"
+
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
@@ -132,6 +137,8 @@ if [ -z "$DEBUG" ]; then
     exit 0
 fi
 
+source "${libDir}/directiveParser.sh" || exit 3
+
 printfToSink()
 {
     eval "printf \"\$@\" $redir"
@@ -202,87 +209,103 @@ handleToFile()
 
 isActive=
 action=
+
+hadPredicate=; while debugConsumeDirectiveInto predicate '?'; do
+    hadPredicate=t
+    if [ -z "$predicate" ]; then
+	isActive=t
+	printfToSink '%s: Warning: Empty PREDICATE given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+    elif eval "(${sinkRedir}; { ${predicate}; } >&3 2>&3)"; then
+	isActive=t
+    fi
+done
+if [ "$hadPredicate" ] && [ ! "$isActive" ]; then
+    passthroughCommands
+    exit 0
+fi
+
 case ",${DEBUG}," in
-    *,${debuggee}\?*([^:,])${module:+:}${module},*)
-	predicate=",${DEBUG},"; predicate="${predicate#*,${debuggee}\?}"; predicate="${predicate%%${module:+:}${module},*}"
-	if [ -z "$predicate" ]; then
-	    isActive=t
-	    printfToSink '%s: Warning: Empty PREDICATE given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
-	elif eval "(${sinkRedir}; { ${predicate}; } >&3 2>&3)"; then
-	    isActive=t
-	else
-	    passthroughCommands
-	    exit 0
-	fi
-	;;
-esac
-case ",${DEBUG}," in
-    *,${debuggee}${module:+:}${module},*)
+    *,"${debuggee}${module:+:}${module}",*)
 	isActive=t
 	;;
-    *,${debuggee}!${module:+:}${module},*)
+    *,"${debuggee}!${module:+:}${module}",*)
 	isActive=t
 	export PS4='! '
 	action=logCommands
 	;;
-    *,${debuggee}\&${module:+:}${module},*)
+    *,"${debuggee}&${module:+:}${module}",*)
 	isActive=t
 	handleToFile
 	silentCommandPrefix="${traceRedir}; set -x; "
 	silentCommandSuffix='; set +x'
 	;;
-    *,${debuggee}~${module:+:}${module},*)
+    *,"${debuggee}~${module:+:}${module}",*)
 	isActive=t
 	handleToFile
 	silentCommandPrefix='{ TIMEFORMAT="real %3lR, user %3lU, sys %3lS"; time '
 	silentCommandSuffix="; } 2$redir"
 	;;
-    *,${debuggee}=*([^:,])${module:+:}${module},*)
-	isActive=t
-	commands=",${DEBUG},"; commands="${commands#*,${debuggee}=}"; commands="${commands%%${module:+:}${module},*}"
-	export PS4='= '
-	[ -z "$commands" ] && printfToSink '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
-	;;
-    *,${debuggee}@*([^:,])${module:+:}${module},*)
-	filespec=",${DEBUG},"; filespec="${filespec#*,${debuggee}@}"; filespec="${filespec%%${module:+:}${module},*}"
-	eval "filespec=$filespec" # Expand environment variables and tilde.
-	if [ -n "$filespec" ]; then
-	    exitStatus=
-	    if [[ "$filespec" =~ ^(.*/)?([0-9]+)-(.+)$ ]]; then
-		exitStatus="${BASH_REMATCH[2]}"
-		filespec="${BASH_REMATCH[1]}${BASH_REMATCH[3]}"
-	    fi
-	    if [ -e "$filespec" ]; then
-		isActive=t
-		printf -v commands 'cat %q%s' "$filespec" "${exitStatus:+; exit $exitStatus}"
-		export PS4='@ '
+    *)
+	hasOtherCommand=
+	while debugConsumeDirectiveInto otherCommand '='; do
+	    isActive=t
+	    if [ -z "$otherCommand" ]; then
+		printfToSink '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    else
-		printfToSink '%s: Warning: Non-existing FILE given for %q; ignoring: %s\n' "$scriptName" "${debuggee}${module:+:}${module}" "$filespec"
+		[ "$hasOtherCommand" ] || commands=''
+		commands+="${commands:+; }${otherCommand}"
+		hasOtherCommand=t
+		export PS4='= '
 	    fi
-	else
-	    printfToSink '%s: Warning: No FILE given for %q; ignoring.\n' "$scriptName" "${debuggee}${module:+:}${module}"
-	fi
+	done
+
+	previousFilespec=
+	while debugConsumeDirectiveInto filespec '@'; do
+	    isActive=t
+
+	    eval "expandedFilespec=$filespec" # Expand environment variables and tilde.
+	    if [ -n "$expandedFilespec" ]; then
+		exitStatus=
+		if [[ "$expandedFilespec" =~ ^(.*/)?([0-9]+)-(.+)$ ]]; then
+		    exitStatus="${BASH_REMATCH[2]}"
+		    expandedFilespec="${BASH_REMATCH[1]}${BASH_REMATCH[3]}"
+		fi
+		if [ -e "$expandedFilespec" ]; then
+		    isActive=t
+		    if [ -n "$previousFilespec" ]; then
+			printfToSink '%s: Warning: Duplicate @%s given for %q\n' "$scriptName" "$previousFilespec" "${debuggee}${module:+:}${module}"
+			actions[-1]="outputting ${expandedFilespec}${exitStatus:+ and exiting with $exitStatus}"
+		    else
+			actions+=("outputting ${expandedFilespec}${exitStatus:+ and exiting with $exitStatus}")
+		    fi
+		    printf -v commands 'cat %q%s' "$expandedFilespec" "; exit${exitStatus:+ }${exitStatus}"
+		    export PS4='@ '
+		    previousFilespec="$filespec"
+		else
+		    printfToSink '%s: Warning: Non-existing FILE given for %q; ignoring: %s\n' "$scriptName" "${debuggee}${module:+:}${module}" "$filespec"
+		fi
+	    else
+		printfToSink '%s: Warning: No FILE given for %q; ignoring.\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    fi
+	done
 	;;
 esac
+
 # We can only embellish the COMMAND if it's still to be executed (i.e.
 # not disabled by the ! case).
 if [ -z "$action" ]; then
-    case ",${DEBUG}," in
-	*,${debuggee}^=*([^:,])${module:+:}${module},*)
-	    isActive=t
-	    prefix=",${DEBUG},"; prefix="${prefix#*,${debuggee}^=}"; prefix="${prefix%%${module:+:}${module},*}"
-	    commands="${prefix}${commands}"
-	    [ -z "$prefix" ] && printfToSink '%s: Warning: Empty PREFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
-	    ;;
-    esac
-    case ",${DEBUG}," in
-	*,${debuggee}+=*([^:,])${module:+:}${module},*)
-	    isActive=t
-	    suffix=",${DEBUG},"; suffix="${suffix#*,${debuggee}+=}"; suffix="${suffix%%${module:+:}${module},*}"
-	    commands+="$suffix"
-	    [ -z "$suffix" ] && printfToSink '%s: Warning: Empty SUFFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
-	    ;;
-    esac
+    while debugConsumeDirectiveInto prefix '^='
+    do
+	isActive=t
+	commands="${prefix}${commands}"
+	[ -z "$prefix" ] && printfToSink '%s: Warning: Empty PREFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+    done
+    while debugConsumeDirectiveInto suffix '+='
+    do
+	isActive=t
+	commands+="$suffix"
+	[ -z "$suffix" ] && printfToSink '%s: Warning: Empty SUFFIX given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+    done
 fi
 
 if [ "$isActive" ]; then

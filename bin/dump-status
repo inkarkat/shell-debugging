@@ -97,7 +97,7 @@ if [ "$isOnDebug" ]; then
     fi
 
     case ",${DEBUG}," in
-	*,${debuggee}${module:+:}${module},*)
+	*,"${debuggee}${module:+:}${module}",*)
 	    case ",${DEBUG}," in
 		*,@(debug|${scriptName})=*,*)
 		    DUMPSTATUS_SINK=",${DEBUG},"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK#*,@(debug|${scriptName})=}"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK%%,*}"

@@ -107,7 +107,7 @@ if [ -z "$debuggee" ]; then
 fi
 
 case ",${DEBUG}," in
-    *,${debuggee}${module:+:}${module},*)
+    *,"${debuggee}${module:+:}${module}",*)
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGENABLED_SINK=",${DEBUG},"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK#*,@(debug|${scriptName})=}"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK%%,*}"
 			    ;;

@@ -371,7 +371,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
     fi
 
     case ",${DEBUG}," in
-	*,${debuggee}${module:+:}${module},*)
+	*,"${debuggee}${module:+:}${module}",*)
 	    setSinkDefaults
 	    isActive=t
 	    EXEC=''
@@ -384,7 +384,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 
     [ -n "$stdinModule" ] \
 	&& case ",${DEBUG}," in
-	    *,${debuggee}:${stdinModule},*)
+	    *,"${debuggee}:${stdinModule}",*)
 		logFileDescriptors[0]+=$stdinModuleEnabler
 		setSinkDefaults
 		;;
@@ -396,7 +396,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 
     [ -n "$stdoutModule" ] \
 	&& case ",${DEBUG}," in
-	    *,${debuggee}:${stdoutModule},*)
+	    *,"${debuggee}:${stdoutModule}",*)
 		logFileDescriptors[1]+=$stdoutModuleEnabler
 		setSinkDefaults
 		;;
@@ -408,7 +408,7 @@ if [ "$isOnDebug" ] && [ -n "$DEBUG" ]; then
 
     [ -n "$stderrModule" ] \
 	&& case ",${DEBUG}," in
-	    *,${debuggee}:${stderrModule},*)
+	    *,"${debuggee}:${stderrModule}",*)
 		logFileDescriptors[2]+=$stderrModuleEnabler
 		setSinkDefaults
 		;;
