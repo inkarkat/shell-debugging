@@ -315,7 +315,7 @@ if [ -n "${exitStatus+t}" ]; then
 fi
 
 case ",${DEBUG}," in
-    *,${debuggee}${module:+:}${module},*)
+    *,"${debuggee}${module:+:}${module}",*)
 	isActive=t
 	;;
 esac

@@ -225,21 +225,21 @@ if [ "$hadPredicate" ] && [ ! "$isActive" ]; then
 fi
 
 case ",${DEBUG}," in
-    *,${debuggee}${module:+:}${module},*)
+    *,"${debuggee}${module:+:}${module}",*)
 	isActive=t
 	;;
-    *,${debuggee}!${module:+:}${module},*)
+    *,"${debuggee}!${module:+:}${module}",*)
 	isActive=t
 	export PS4='! '
 	action=logCommands
 	;;
-    *,${debuggee}\&${module:+:}${module},*)
+    *,"${debuggee}&${module:+:}${module}",*)
 	isActive=t
 	handleToFile
 	silentCommandPrefix="${traceRedir}; set -x; "
 	silentCommandSuffix='; set +x'
 	;;
-    *,${debuggee}~${module:+:}${module},*)
+    *,"${debuggee}~${module:+:}${module}",*)
 	isActive=t
 	handleToFile
 	silentCommandPrefix='{ TIMEFORMAT="real %3lR, user %3lU, sys %3lS"; time '
