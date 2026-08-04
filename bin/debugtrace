@@ -69,7 +69,8 @@ HELPDESCRIPTION
     --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
 			for tracing and just leave a reference to FILE there.
     --description|-d DESCRIPTION
-			Include DESCRIPTION in the log message for this trace point.
+			Include DESCRIPTION in the log message for this trace
+			point.
     --point|-p TRACE-POINT-NAME
 			Uniquely identify this trace point when using multiple
 			in the same DEBUGGEE, so that you can enable tracing for
