@@ -137,7 +137,11 @@ addDebug()
 
 extractCommandName()
 {
-    COMMANDNAME_WRAPPERS='' commandName --no-interpreter --full-filespec --eval "$@"
+    # Ignore the witha wrapper added by addAliasSupport.
+    # It would be even better to actually extract the underlying command from the
+    # alias.
+    COMMANDNAME_WRAPPERS='witha' \
+	commandName --no-interpreter --full-filespec --eval "$@"
 }
 hasTraceSupport()
 {
