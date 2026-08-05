@@ -135,6 +135,10 @@ addDebug()
     done
 }
 
+extractCommandName()
+{
+    COMMANDNAME_WRAPPERS='' commandName --no-interpreter --full-filespec --eval "$@"
+}
 hasTraceSupport()
 {
     local commandFilespec="${1:?}"; shift
@@ -165,7 +169,7 @@ addCommand()
 	done
 
 	if contains '&' "${extensions[@]}" || [ "$isTraceCommand" ]; then
-	    local commandFilespec="$(COMMANDNAME_WRAPPERS='' commandName --no-interpreter --full-filespec --eval "$cmd")"
+	    local commandFilespec="$(extractCommandName --full-filespec "$cmd")"
 	    if [ -n "$commandFilespec" ] \
 		&& [ -r "$commandFilespec" ] \
 		&& ! hasTraceSupport "$commandFilespec"
@@ -187,7 +191,7 @@ programName=
 addDebugCommand()
 {
     local cmd="${1:?}"; shift
-    commandName="$(COMMANDNAME_WRAPPERS='' commandName --no-interpreter --eval "$cmd")"
+    commandName="$(extractCommandName "$cmd")"
     if [ -z "$commandName" ]; then
 	printf >&2 'ERROR: Could not determine command name for %s\n' "$cmd"
 	return 1
