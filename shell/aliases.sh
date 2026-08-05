@@ -8,6 +8,8 @@ addAliasSupport withDebug \
 
 alias d='withDebug'
 IFS=: optionmunge HISTIGNORE 'd:d *'
+alias dt='withDebug --extension \&'
+IFS=: optionmunge HISTIGNORE 'dt:dt *'
 alias ds='withDebug --same'
 IFS=: optionmunge HISTIGNORE 'ds:ds *'
 alias dr='withDebug --recall'
