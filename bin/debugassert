@@ -9,7 +9,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+[env DEBUG[ASSERT]_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [-d|--description DESCRIPTION|-D|--assertion DESCRIPTION] [-e|--errexit] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGASSERT_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env DEBUG[ASSERT]_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [-d|--description DESCRIPTION|-D|--assertion DESCRIPTION] [-v|--unexpected VALUE] [-e|--errexit] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGASSERT_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -47,6 +47,9 @@ HELPDESCRIPTION
     --assertion|-D DESCRIPTION
 			Use DESCRIPTION in the log message and omit the
 			actual COMMAND(s) used.
+    --unexpected|-v VALUE
+			Include VALUE in the log message (after the failing exit
+			status) if COMMAND(s) fail.
     --errexit|-e	Exit immediately if any COMMAND(s) fail, like "set -e".
 
 SEE ALSO:
@@ -63,6 +66,7 @@ debuggee="$DEBUG_DEBUGGEE"
 module=
 description=
 isIncludeCommands=t
+unexpectedValue=
 commands=
 errExit=
 while [ $# -ne 0 ]
@@ -75,6 +79,8 @@ do
 			shift; description="${1?}"; shift;;
 	--assertion|-D)
 			shift; description="${1?}"; shift; isIncludeCommands=;;
+	--unexpected|-v)
+			shift; unexpectedValue="${1?}"; shift;;
 	--errexit|-e)	shift; errExit='set -e';;
 
 	--command|-c)	shift; commands+="${commands:+ $DEBUGASSERT_COMMAND_JOINER }$1"; shift;;
@@ -161,7 +167,7 @@ case ",${DEBUG}," in
 	    [ -z "$output" ] \
 		|| logCommands 'succeeded with output' "$output"
 	else
-	    logCommands "failed ($status)" "$output"
+	    logCommands "failed ($status${unexpectedValue:+, }${unexpectedValue})" "$output"
 	fi
 	exit 0
 	;;
