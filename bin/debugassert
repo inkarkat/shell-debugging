@@ -9,7 +9,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+[env DEBUG[ASSERT]_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [-d|--description DESCRIPTION] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGASSERT_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env DEBUG[ASSERT]_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [-d|--description DESCRIPTION] [-e|--errexit] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGASSERT_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -43,10 +43,13 @@ HELPDESCRIPTION
     --description|-d DESCRIPTION
 			Include DESCRIPTION in the log message and omit the
 			actual COMMAND(s) used.
+    --errexit|-e	Exit immediately if any COMMAND(s) fail, like "set -e".
+
 SEE ALSO:
 - debugcustom also executes COMMAND(s) if debugging is enabled for the caller,
   but it will log any output from COMMAND(s) regardless of whether they
   succeeded or failed.
+
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
 HELPTEXT
@@ -56,6 +59,7 @@ debuggee="$DEBUG_DEBUGGEE"
 module=
 description=
 commands=
+errExit=
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -64,6 +68,7 @@ do
 	--module|-m)	shift; module="${1:?}"; shift;;
 	--description|-d)
 			shift; description="${1?}"; shift;;
+	--errexit|-e)	shift; errExit='set -e';;
 
 	--command|-c)	shift; commands+="${commands:+ $DEBUGASSERT_COMMAND_JOINER }$1"; shift;;
 	--exec)		shift
@@ -145,7 +150,7 @@ case ",${DEBUG}," in
 	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
 	esac
 
-	output="$(eval "$commands" 2>&1)"; status=$?	# Note: Cannot use if output="$(...)" because that makes "set -e" ignore the failure.
+	output="$($errExit; eval "$commands" 2>&1)"; status=$?	# Note: Cannot use if output="$(...)" because that makes "set -e" ignore the failure.
 	if [ $status -eq 0 ]; then
 	    [ -z "$output" ] \
 		|| logCommands 'succeeded with output' "$output"
