@@ -161,7 +161,7 @@ case ",${DEBUG}," in
 	    [ -z "$output" ] \
 		|| logCommands 'succeeded with output' "$output"
 	else
-	    logCommands 'failed' "$output"
+	    logCommands "failed ($status)" "$output"
 	fi
 	exit 0
 	;;
