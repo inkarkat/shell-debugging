@@ -9,7 +9,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+[env DEBUG[ASSERT]_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [-d|--description DESCRIPTION] [-e|--errexit] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGASSERT_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env DEBUG[ASSERT]_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [-d|--description DESCRIPTION|-D|--assertion DESCRIPTION] [-e|--errexit] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGASSERT_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -41,7 +41,11 @@ HELPDESCRIPTION
     --module|-m MODULE	Assert only if debugging for MODULE of the DEBUGGEE is
 			enabled.
     --description|-d DESCRIPTION
-			Include DESCRIPTION in the log message and omit the
+			Include DESCRIPTION in the log message instead of the
+			generic "Assertion". Still include the actual COMMAND(s)
+			used.
+    --assertion|-D DESCRIPTION
+			Use DESCRIPTION in the log message and omit the
 			actual COMMAND(s) used.
     --errexit|-e	Exit immediately if any COMMAND(s) fail, like "set -e".
 
@@ -58,6 +62,7 @@ HELPTEXT
 debuggee="$DEBUG_DEBUGGEE"
 module=
 description=
+isIncludeCommands=t
 commands=
 errExit=
 while [ $# -ne 0 ]
@@ -68,6 +73,8 @@ do
 	--module|-m)	shift; module="${1:?}"; shift;;
 	--description|-d)
 			shift; description="${1?}"; shift;;
+	--assertion|-D)
+			shift; description="${1?}"; shift; isIncludeCommands=;;
 	--errexit|-e)	shift; errExit='set -e';;
 
 	--command|-c)	shift; commands+="${commands:+ $DEBUGASSERT_COMMAND_JOINER }$1"; shift;;
@@ -127,10 +134,9 @@ logCommands()
     local timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
     local nestingPrefix="$(PS4='? ' debugNestingPrefix)"
     local printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
-    local nonDescription; [ -n "$description" ] || nonDescription="$commands"
 
     setSink
-    printf '%s%s %s %s%s\n%s' "$printerPrefix" "$debuggee (${module}${module:+, }${PPID})" "${description:-Assertion}" "$logReason" "${nonDescription:+: }${nonDescription}" "${output}${output:+$'\n'}"
+    printf '%s%s %s %s%s\n%s' "$printerPrefix" "$debuggee (${module}${module:+, }${PPID})" "${description:-Assertion}" "$logReason" "${isIncludeCommands:+: $commands}" "${output}${output:+$'\n'}"
 }
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
