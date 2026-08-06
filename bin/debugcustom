@@ -28,9 +28,9 @@ printLongUsage()
 Execute COMMAND(s) if debugging is enabled for the caller; any output will be
 collected in a debug file (DEBUGGEE.log) / \$DEBUGCUSTOM_SINK / \$DEBUG_LOG:
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debug[log]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
+With "DEBUG=debug[custom]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
 FILESPEC instead.
-With "DEBUG=debug[log] DEBUGGEE ..." will show for what DEBUGGEE it will
+With "DEBUG=debug[custom] DEBUGGEE ..." will show for what DEBUGGEE it will
 enable (if not actually enabled).
 HELPDESCRIPTION
     echo
