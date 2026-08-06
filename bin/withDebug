@@ -253,9 +253,9 @@ handleStoredArguments()
 	    --to)		shift; overrideTo="$1"; shift;;
 	    --for)		shift; overrideFor["$1"]=t; shift;;
 	    --only-for)		shift; overrideOnlyFor["$1"]=t; shift;;
-	    --module|-m)	shift; overrideModules["$1"]=t; shift;;
-	    --only-module|-M)	shift; overrideOnlyModules["$1"]=t; shift;;
-	    --extension|-x)	shift; overrideExtensions["$1"]=t; shift;;
+	    --module|-m)	shift; overrideModules["${1:-$'\n'}"]=t; shift;;
+	    --only-module|-M)	shift; overrideOnlyModules["${1:-$'\n'}"]=t; shift;;
+	    --extension|-x)	shift; overrideExtensions["${1:-$'\n'}"]=t; shift;;
 	    --command|-c)	commandArgs+=("$1" "$2"); shift; shift;;
 	    --exec)		commandArgs+=("$1"); shift
 				while [ $# -gt 0 -a "$1" != "$WITHDEBUG_EXEC_END" ]
@@ -290,9 +290,9 @@ handleStoredArguments()
 	    --to)		[ -n "$overrideTo" ] && overrideTo= || allargs+=("$1" "$2"); shift; shift;;
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --only-for)		[ "${overrideOnlyFor["$2"]}" ] && unset "overrideOnlyFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
-	    --module|-m)	[ "${overrideModules["$2"]}" ] && unset "overrideModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
-	    --only-module|-M)   [ "${overrideOnlyModules["$2"]}" ] && unset "overrideOnlyModules[$2]" || allargs+=("$1" "$2"); shift; shift;;
-	    --extension|-x)	[ "${overrideExtensions["$2"]}" ] && unset "overrideExtension[$2]" || allargs+=("$1" "$2"); shift; shift;;
+	    --module|-m)	[ "${overrideModules["${2:-$'\n'}"]}" ] && unset "overrideModules[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
+	    --only-module|-M)   [ "${overrideOnlyModules["${2:-$'\n'}"]}" ] && unset "overrideOnlyModules[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
+	    --extension|-x)	[ "${overrideExtensions["${2:-$'\n'}"]}" ] && unset "overrideExtension[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
 	    --)			allargs+=("$@"); break;;
 	    *)			allargs+=("$1"); shift;;
 	esac
@@ -323,15 +323,15 @@ handleStoredArguments()
     done
     for arg in "${!overrideModules[@]}"
     do
-	newArgs+=(--module "$arg")
+	newArgs+=(--module "${arg/$'\n'/}")
     done
     for arg in "${!overrideOnlyModules[@]}"
     do
-	newArgs+=(--only-module "$arg")
+	newArgs+=(--only-module "${arg/$'\n'/}")
     done
     for arg in "${!overrideExtensions[@]}"
     do
-	newArgs+=(--extension "$arg")
+	newArgs+=(--extension "${arg/$'\n'/}")
     done
 
     # Return via allargs array.
