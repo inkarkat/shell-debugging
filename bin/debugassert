@@ -1,0 +1,161 @@
+#!/bin/bash
+set -o pipefail
+shopt -qs extglob
+
+: ${DEBUGASSERT_COMMAND_JOINER=;}
+: ${DEBUGASSERT_EXEC_END=;}
+
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: ${DEBUG:+[env DEBUG[ASSERT]_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [-d|--description DESCRIPTION] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGASSERT_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Execute COMMAND(s) if debugging is enabled for the caller and report an
+unsuccessful execution (and/or any output from COMMAND(s)) in a debug file
+(DEBUGGEE.log) / \$DEBUGASSERT_SINK / \$DEBUG_LOG:
+DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+With "DEBUG=debug[assert]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
+FILESPEC instead.
+With "DEBUG=debug[assert] DEBUGGEE ..." will show for what DEBUGGEE it will
+assert (if not actually asserting).
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
+			parent process.
+    --module|-m MODULE	Assert only if debugging for MODULE of the DEBUGGEE is
+			enabled.
+    --description|-d DESCRIPTION
+			Include DESCRIPTION in the log message and omit the
+			actual COMMAND(s) used.
+SEE ALSO:
+- debugcustom also executes COMMAND(s) if debugging is enabled for the caller,
+  but it will log any output from COMMAND(s) regardless of whether they
+  succeeded or failed.
+EXIT STATUS:
+    2	Bad invocation, wrong or missing command-line arguments.
+HELPTEXT
+}
+
+debuggee="$DEBUG_DEBUGGEE"
+module=
+description=
+commands=
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--for)		shift; debuggee="${1?}"; shift;;
+	--module|-m)	shift; module="${1:?}"; shift;;
+	--description|-d)
+			shift; description="${1?}"; shift;;
+
+	--command|-c)	shift; commands+="${commands:+ $DEBUGASSERT_COMMAND_JOINER }$1"; shift;;
+	--exec)		shift
+			cmd=
+			while [ $# -gt 0 -a "$1" != "$DEBUGASSERT_EXEC_END" ]
+			do
+			    printf -v quotedArg %q "$1"
+			    cmd+="${cmd:+ }${quotedArg}"
+			    shift
+			done
+			if [ $# -eq 0 ]; then
+			    echo "ERROR: --exec command must be concluded with '${DEBUGASSERT_EXEC_END}'"; echo; printUsage "$0"
+			    exit 2
+			fi >&2
+			shift
+			commands+="${commands:+ $DEBUGASSERT_COMMAND_JOINER }${cmd}"
+			;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
+if [ $# -ne 0 ]; then
+    # Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
+    # undo the effects of eval.
+    printf -v quotedSimpleCommand '%q ' "$@"
+    commands+="${commands:+ $DEBUGASSERT_COMMAND_JOINER }${quotedSimpleCommand% }"
+fi
+if [ -z "$commands" ]; then
+    echo "ERROR: No COMMAND(s) specified; need to pass -c|--command \"COMMANDLINE\", or --exec SIMPLECOMMAND [...] $DEBUGASSERT_EXEC_END or SIMPLECOMMAND."
+    echo
+    printUsage "$0"
+    exit 2
+fi >&2
+
+[ -n "$DEBUG" ] || exit 0
+
+unset sink
+setSink()
+{
+    [ -n "${sink+t}" ] && return 0
+
+    sink="${DEBUGASSERT_SINK-$DEBUG_SINK}"
+    case "$sink" in
+	'')		exec >&2;;
+	\&+([0-9]))	eval "exec >$sink";;
+	?*)		exec >>"$sink";;
+    esac
+}
+
+logCommands()
+{
+    local logReason="${1:?}"; shift
+    local output="${1?}"; shift
+
+    local timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
+    local nestingPrefix="$(PS4='? ' debugNestingPrefix)"
+    local printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
+    local nonDescription; [ -n "$description" ] || nonDescription="$commands"
+
+    setSink
+    printf '%s%s %s %s%s\n%s' "$printerPrefix" "$debuggee (${module}${module:+, }${PPID})" "${description:-Assertion}" "$logReason" "${nonDescription:+: }${nonDescription}" "${output}${output:+$'\n'}"
+}
+
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
+if [ -z "$debuggee" ]; then
+    {
+	IFS= read -r -d '' debugCmd
+	IFS= read -r -d '' debugSecond
+    } < /proc/${PPID}/cmdline
+    debuggee="$(commandName --no-interpreter --undefined "$scriptName" -- "$debugCmd" "$debugSecond")"
+fi
+
+case ",${DEBUG}," in
+    *,"${debuggee}${module:+:}${module}",*)
+	case ",${DEBUG}," in
+	    *,@(debug|${scriptName})=*,*) DEBUGASSERT_SINK=",${DEBUG},"; DEBUGASSERT_SINK="${DEBUGASSERT_SINK#*,@(debug|${scriptName})=}"; DEBUGASSERT_SINK="${DEBUGASSERT_SINK%%,*}"
+			    ;;
+	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
+	esac
+
+	output="$(eval "$commands" 2>&1)"; status=$?	# Note: Cannot use if output="$(...)" because that makes "set -e" ignore the failure.
+	if [ $status -eq 0 ]; then
+	    [ -z "$output" ] \
+		|| logCommands 'succeeded with output' "$output"
+	else
+	    logCommands 'failed' "$output"
+	fi
+	exit 0
+	;;
+    *,@(debug|${scriptName}),*)
+	setSink
+	printf '%s: Will assert %s with DEBUG=%q\n' "$scriptName" "${description:-$(commandName --undefined 'passed command(s)' --eval "$commands")}" "${debuggee}${module:+:}${module}"
+	;;
+esac

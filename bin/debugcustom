@@ -46,6 +46,8 @@ HELPDESCRIPTION
     --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
 			and just leave a reference to FILE there.
 SEE ALSO:
+- debugassert also executes COMMAND(s) if debugging is enabled for the caller,
+  but it will only log if COMMAND(s) failed or produce any output.
 - debugcommand is a wrapper for COMMAND(s) that should always be executed, and
   will log to a debug file if debugging is enabled for the caller.
 - debugenabled can be used to check whether debugging is enabled or query the
