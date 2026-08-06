@@ -1,0 +1,7 @@
+#!/bin/bash
+
+${DEBUG:+debugassert true}
+${DEBUG:+env DEBUGASSERT_COMMAND_JOINER='|' debugassert --module random --exec date +%s \; --exec grep '[02468]$' \;}
+${DEBUG:+debugassert --module random -d 'dice roll 50%' -c '((RANDOM % 2))'}
+${DEBUG:+debugassert --module fail -e -c 'grep $USER /etc/passwd' -c 'grep doesNotExist /etc/passwd' -c 'grep root /etc/passwd'}
+echo EOF

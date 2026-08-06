@@ -46,6 +46,8 @@ HELPDESCRIPTION
     --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
 			and just leave a reference to FILE there.
 SEE ALSO:
+- debugassert also executes COMMAND(s) if debugging is enabled for the caller,
+  but it will only log if COMMAND(s) failed or produce any output.
 - debugcommand is a wrapper for COMMAND(s) that should always be executed, and
   will log to a debug file if debugging is enabled for the caller.
 - debugenabled can be used to check whether debugging is enabled or query the
@@ -54,6 +56,7 @@ SEE ALSO:
 
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
+    *	Any exit status from COMMAND(s).
 HELPTEXT
 }
 
@@ -148,7 +151,7 @@ case ",${DEBUG}," in
 	else
 	    setSink
 
-	    output="$(eval "$commands" 2>&1)"
+	    output="$(eval "$commands" 2>&1)"; status=$?
 
 	    if [ -n "$toFile" ]; then
 		# Log the reference in the debug file.
@@ -160,7 +163,7 @@ case ",${DEBUG}," in
 	    fi
 
 	    printf '%s\n' "$output"
-	    exit $?
+	    exit $status
 	fi
 	;;
     *,@(debug|${scriptName}),*)
