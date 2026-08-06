@@ -54,6 +54,7 @@ SEE ALSO:
 
 EXIT STATUS:
     2	Bad invocation, wrong or missing command-line arguments.
+    *	Any exit status from COMMAND(s).
 HELPTEXT
 }
 
@@ -148,7 +149,7 @@ case ",${DEBUG}," in
 	else
 	    setSink
 
-	    output="$(eval "$commands" 2>&1)"
+	    output="$(eval "$commands" 2>&1)"; status=$?
 
 	    if [ -n "$toFile" ]; then
 		# Log the reference in the debug file.
@@ -160,7 +161,7 @@ case ",${DEBUG}," in
 	    fi
 
 	    printf '%s\n' "$output"
-	    exit $?
+	    exit $status
 	fi
 	;;
     *,@(debug|${scriptName}),*)
