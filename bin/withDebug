@@ -141,7 +141,7 @@ extractCommandName()
     # It would be even better to actually extract the underlying command from the
     # alias.
     COMMANDNAME_WRAPPERS='witha' \
-	commandName --no-interpreter --full-filespec --eval "$@"
+	commandName --no-interpreter --eval "$@"
 }
 hasTraceSupport()
 {
