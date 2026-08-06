@@ -292,7 +292,7 @@ handleStoredArguments()
 	    --only-for)		[ "${overrideOnlyFor["$2"]}" ] && unset "overrideOnlyFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["${2:-$'\n'}"]}" ] && unset "overrideModules[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
 	    --only-module|-M)   [ "${overrideOnlyModules["${2:-$'\n'}"]}" ] && unset "overrideOnlyModules[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
-	    --extension|-x)	[ "${overrideExtensions["${2:-$'\n'}"]}" ] && unset "overrideExtension[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
+	    --extension|-x)	[ "${overrideExtensions["${2:-$'\n'}"]}" ] && unset "overrideExtensions[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
 	    --)			allargs+=("$@"); break;;
 	    *)			allargs+=("$1"); shift;;
 	esac
