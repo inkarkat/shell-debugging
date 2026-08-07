@@ -143,6 +143,17 @@ extractCommandName()
     COMMANDNAME_WRAPPERS='witha' \
 	commandName --no-interpreter --eval "$@"
 }
+getCommandFilespec()
+{
+    local cmd="${1:?}"; shift
+    local commandFilespec="$(extractCommandName --full-filespec "$cmd")"
+    if [ -r "$commandFilespec" ]; then
+	printf %s "$commandFilespec"
+    elif [ -n "$commandFilespec" ]; then
+	which -- "$commandFilespec" 2>/dev/null
+    fi
+
+}
 hasTraceSupport()
 {
     local commandFilespec="${1:?}"; shift
@@ -173,14 +184,18 @@ addCommand()
 	done
 
 	if contains '&' "${extensions[@]}" || [ "$isTraceCommand" ]; then
-	    local commandFilespec="$(extractCommandName --full-filespec "$cmd")"
-	    if [ -n "$commandFilespec" ] \
-		&& [ -r "$commandFilespec" ] \
-		&& ! hasTraceSupport "$commandFilespec"
-	    then
+	    local commandFilespec="$(getCommandFilespec "$cmd")"
+	    if [ -z "$commandFilespec" ]; then
+		printf >&2 'ERROR: Could not locate command %s\n' "$commandName"
+	    elif hasTraceSupport "$commandFilespec"; then
+		[ ! "$isVerbose" ] \
+		    || printf >&2 '%s%s has built-in debugtrace support.\n' "${PS4:-\$ }" "$commandName"
+	    else
 		if [ -n "$wrappers" ]; then
 		    printf >&2 'Note: Cannot enable tracing for %s without built-in debugtrace support when a wrapper is configured.\n' "$commandFilespec"
 		else
+		    [ ! "$isVerbose" ] \
+			|| printf >&2 '%s%s has no built-in debugtrace support.\n' "${PS4:-\$ }" "$commandName"
 		    printf -v cmd '(BASH_ARGV0=%q; set -x; . %s)' "$commandFilespec" "$cmd"
 		fi
 	    fi
