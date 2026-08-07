@@ -143,17 +143,6 @@ extractCommandName()
     COMMANDNAME_WRAPPERS='witha' \
 	commandName --no-interpreter --eval "$@"
 }
-getCommandFilespec()
-{
-    local cmd="${1:?}"; shift
-    local commandFilespec="$(extractCommandName --full-filespec "$cmd")"
-    if [ -r "$commandFilespec" ]; then
-	printf %s "$commandFilespec"
-    elif [ -n "$commandFilespec" ]; then
-	which -- "$commandFilespec" 2>/dev/null
-    fi
-
-}
 hasTraceSupport()
 {
     local commandFilespec="${1:?}"; shift
@@ -184,7 +173,7 @@ addCommand()
 	done
 
 	if contains '&' "${extensions[@]}" || [ "$isTraceCommand" ]; then
-	    local commandFilespec="$(getCommandFilespec "$cmd")"
+	    local commandFilespec="$(extractCommandName --full-filespec "$cmd")"
 	    if [ -z "$commandFilespec" ]; then
 		printf >&2 'ERROR: Could not locate command %s\n' "$commandName"
 	    elif hasTraceSupport "$commandFilespec"; then
