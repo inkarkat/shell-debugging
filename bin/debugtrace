@@ -77,6 +77,8 @@ HELPDESCRIPTION
 			each separately.
     -o \$-		Pass the caller's current shell options to allow
 			detection of whether debugging is currently enabled.
+    -- "\$@"		Pass the caller's current arguments to log them and
+			allow substitutions in them.
 SEE ALSO:
 - debugeval enables tracing for a single passed COMMAND instead of all following
   statements in the caller, and has similar replacements and embellishments for
@@ -113,6 +115,7 @@ do
     esac
 done
 [ -n "$DEBUG" ] || exit 0
+quotedArgs=; if [ $# -gt 0 ]; then printf -v quotedArgs '%q ' "$@"; quotedArgs="${quotedArgs% }"; fi
 
 source "${libDir}/directiveParser.sh" || exit 3
 
@@ -126,7 +129,12 @@ logActions()
     local timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
     local nestingPrefix="$(debugNestingPrefix)"
     local printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
-    printf >&3 '%s%s %s\n' "$printerPrefix" "$debuggee (${module}${module:+, }${PPID})" "reached ${tracePointName:-trace point}${description:+ (${description})}$(joinBy --prefix '; ' ', ' "${actions[@]}")"
+    printf >&3 '%s%s %s%s%s\n' \
+	"$printerPrefix" \
+	"$debuggee (${module}${module:+, }${PPID})" \
+	"reached ${tracePointName:-trace point}${description:+ (${description})}" \
+	"${quotedArgs:+ with arguments ${O}${quotedArgs}${C}}" \
+	"$(joinBy --prefix '; ' ', ' "${actions[@]}")"
 }
 
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
@@ -259,7 +267,6 @@ do
 	fi
     fi
 done
-quotedArgs=; if [ $# -gt 0 ]; then printf -v quotedArgs '%q ' "$@"; quotedArgs="${quotedArgs% }"; fi
 if [ -n "${replacement+t}" ]; then
     [ ${#substitutions[@]} -gt 0 ] \
 	&& printfToSink '%s: Warning: PATTERN eclipsed by REPLACEMENT given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
@@ -277,6 +284,7 @@ elif [ ${#substitutions[@]} -gt 0 ]; then
 	actions+=("injecting arguments via replacement with ${O}${quotedReplacement}${C}")
     fi
     commands+="${commands:+; }set -- $quotedReplacement"
+    quotedArgs=''   # Don't log the original arguments.
 fi
 
 isGloballyEnabledTracing=
