@@ -7,6 +7,7 @@ shopt -qs globstar extglob nullglob
 readonly DATA_DIRSPEC="${XDG_DATA_HOME:-${HOME}/.local/share}"
 readonly WITHDEBUG_RECALL_FILESPEC="${DATA_DIRSPEC}/withDebug-recall"
 readonly WITHDEBUG_SAME_FILESPEC="${DATA_DIRSPEC}/withDebug-same"
+readonly WITHDEBUG_LASTLOG_FILESPEC="${DATA_DIRSPEC}/withDebug-last-log"
 
 printShortUsage()
 {
@@ -546,6 +547,7 @@ else
     [ "$isAppend" ] || : > "$sink"
     exec 3>>"${sink:?}"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
     export DEBUG_SINK="$sink"
+    printf '%s\n' "$sink" > "$WITHDEBUG_LASTLOG_FILESPEC"
 
     if [ ${#pager[@]} -gt 0 ]; then
 	openPager()
