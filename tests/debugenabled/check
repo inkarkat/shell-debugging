@@ -1,12 +1,12 @@
 #!/bin/bash
 
-if ! ${DEBUG:+debugenabled --invert-match --} ${DEBUG:-:}; then
+if ! ${DEBUG:+debugenabled --description enable --invert-match --} ${DEBUG:-:}; then
     echo 'Debugging is enabled for the caller.'
 else
     echo 'Debugging is NOT enabled for the caller.'
 fi
 
-if ! ${DEBUG:+debugenabled --invert-match --extension \! --} ${DEBUG:-:}; then
+if ! ${DEBUG:+debugenabled --description override --invert-match --extension \! --} ${DEBUG:-:}; then
     echo 'Debug override (!) is enabled for the caller.'
 else
     echo 'Debugging override (!) is NOT enabled for the caller.'
