@@ -1,0 +1,4 @@
+#!/bin/bash
+
+date > trapped.txt
+trap '${DEBUG:+debugcommand --} rm --force -- trapped.txt 2>/dev/null' EXIT

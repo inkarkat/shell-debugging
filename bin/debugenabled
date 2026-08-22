@@ -5,7 +5,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[-I|--invert-match] [--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [--get-sink] [--] [IGNORED-ARG ...] [-?|-h|--help]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[-I|--invert-match] [--for DEBUGGEE] [-x|--extension EXTENSION] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [--get-sink] [--] [IGNORED-ARG ...] [-?|-h|--help]'
     echo
     printf 'Usage: [ -n "$DEBUG" ] && debugSink="$(%q %s)" && SCRIPT-FUNCTION > $debugSink\n' "$(basename "$1")" '... --get-sink'
     printf 'Usage: ! ${DEBUG:+%q %s} ${DEBUG:-:} || NDEBUG-COMMAND\n' "$(basename "$1")" '--invert-match ... --'
@@ -31,9 +31,16 @@ HELPDESCRIPTION
     --invert-match|-I	Succeed if debugging is NOT enabled for the caller.
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
+    --extension|-x EXTENSION
+			The EXTENSION (e.g. a sigil like "!" or a directive like
+			"+=SUFFIX" that modify the debugging behavior) needs to
+			be active for the check to succeed.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
     --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
+    --description|-d DESCRIPTION
+			Use DESCRIPTION instead of "activate" for the debug
+			enablement information.
     --get-sink		Print the sink filespec where debug output is written
 			to.
 SEE ALSO:
@@ -50,10 +57,12 @@ HELPTEXT
 }
 
 debuggee="$DEBUG_DEBUGGEE"
+extension=
 enabledStatus=0
 disabledStatus=1
 module=
 unset toFile
+description=
 action=
 while [ $# -ne 0 ]
 do
@@ -62,8 +71,10 @@ do
 	--invert-match|-I)
 			shift; enabledStatus=1; disabledStatus=0;;
 	--for)		shift; debuggee="${1?}"; shift;;
+	--extension|-x)	shift; extension="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
 	--to)		shift; toFile="${1:?}"; shift;;
+	--description|-d) shift; description="${1?}"; shift;;
 	--get-sink)	shift; action=printSink;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
@@ -107,7 +118,7 @@ if [ -z "$debuggee" ]; then
 fi
 
 case ",${DEBUG}," in
-    *,"${debuggee}${module:+:}${module}",*)
+    *,"${debuggee}${extension}${module:+:}${module}",*)
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGENABLED_SINK=",${DEBUG},"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK#*,@(debug|${scriptName})=}"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK%%,*}"
 			    ;;
@@ -119,7 +130,7 @@ case ",${DEBUG}," in
 	;;
     *,@(debug|${scriptName}),*)
 	setSink
-	printf '%s: Will activate with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	printf '%s: Will %s with DEBUG=%q\n' "$scriptName" "${description:-activate}" "${debuggee}${extension}${module:+:}${module}"
 	;;
 esac
 exit $disabledStatus
