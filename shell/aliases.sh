@@ -11,10 +11,13 @@ optionmunge -s : HISTIGNORE 'd:d *'
 alias da='withDebuga'
 optionmunge -s : HISTIGNORE 'da:da *'
 
-alias dl='withDebug --list-targets'
-optionmunge -s : HISTIGNORE 'dl:dl *'
-alias dla='withDebuga --list-targets'
-optionmunge -s : HISTIGNORE 'dla:dla *'
+if [ ! "${KSH_VERSION:-}" ]; then
+    # Korn shell doesn't support ? in alias names.
+    alias 'd?'='withDebug --list-targets'
+    optionmunge -s : HISTIGNORE 'd?:d? *'
+    alias 'd?a'='withDebuga --list-targets'
+    optionmunge -s : HISTIGNORE 'd?a:d?a *'
+fi
 
 alias dt='withDebug --extension \&'
 optionmunge -s : HISTIGNORE 'dt:dt *'
