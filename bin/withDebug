@@ -494,10 +494,11 @@ if [ ! "$isListTargets" ]; then
 fi
 
 if [ "$isVerbose" ]; then
+    logDirVariable=; [ -z "$DEBUG_LOGDIR" ] || printf -v logDirVariable 'DEBUG_LOGDIR=%q' "$DEBUG_LOGDIR"
     if [ $commandCnt -eq 1 ]; then
-	printf >&2 '%sDEBUG=%q %s\n' "${PS4:-\$ }" "$DEBUG" "$commands"
+	printf >&2 '%sDEBUG=%q%s %s\n' "${PS4:-\$ }" "$DEBUG" "${logDirVariable:+ }${logDirVariable}" "$commands"
     else
-	printf >&2 '%s{ DEBUG=%q; %s; }\n' "${PS4:-\$ }" "$DEBUG" "$commands"
+	printf >&2 '%s{ DEBUG=%q%s; %s; }\n' "${PS4:-\$ }" "$DEBUG" "${logDirVariable:+; }${logDirVariable}" "$commands"
     fi
 fi
 
