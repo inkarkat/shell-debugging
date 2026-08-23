@@ -7,8 +7,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [DUMPSTATUS_SINK=FILESPEC|&N|""] %q %s\n' "$(basename "$1")" '[-v|--verbose] [--] COMMAND [ARG ...] [-?|-h|--help]'
-    printf 'Usage: ${DEBUG:+[env (DUMPSTATUS|DEBUG)_SINK=FILESPEC|&N|""] %q %s} %s\n' "$(basename "$1")" '-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE] [--verbose] [--]' 'COMMAND [ARG ...]'
+    printf 'Usage: [DUMPSTATUS_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s\n' "$(basename "$1")" '[-v|--verbose] [--] COMMAND [ARG ...] [-?|-h|--help]'
+    printf 'Usage: ${DEBUG:+[env (DUMPSTATUS|DEBUG)_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s} %s\n' "$(basename "$1")" '-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE] [--verbose] [--]' 'COMMAND [ARG ...]'
 }
 printUsage()
 {
@@ -102,7 +102,9 @@ if [ "$isOnDebug" ]; then
 		*,@(debug|${scriptName})=*,*)
 		    DUMPSTATUS_SINK=",${DEBUG},"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK#*,@(debug|${scriptName})=}"; DUMPSTATUS_SINK="${DUMPSTATUS_SINK%%,*}"
 		    ;;
-		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+		*)  defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+		    : ${DEBUG_SINK:="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
+		    ;;
 	    esac
 	    ;;
 	*,@(debug|${scriptName}),*)

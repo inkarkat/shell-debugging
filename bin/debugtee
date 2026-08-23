@@ -5,7 +5,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: cat FILE [...] | [DEBUG[TEE]_SINK=FILESPEC|&N|""] %q %s | COMMAND ...\n' "$(basename "$1")" '[-1|--single-capture] [--no-header|-d|--description DESCRIPTION] [--for DEBUGGEE] [-m|--module MODULE] [--to FILE]'
+    printf 'Usage: cat FILE [...] | [DEBUG[TEE]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s | COMMAND ...\n' "$(basename "$1")" '[-1|--single-capture] [--no-header|-d|--description DESCRIPTION] [--for DEBUGGEE] [-m|--module MODULE] [--to FILE]'
     printf "Usage: cat FILE [...] | eval \"\${DEBUG:+%q %s |}\" 'COMMAND [...]'\\n" "$(basename "$1")" '...'
     printf "Usage: eval 'COMMAND [...]' \"\${DEBUG:+| %q %s}\"\\n" "$(basename "$1")" '... [--to ${HOME@Q}/out.log}]'
 }
@@ -116,9 +116,11 @@ case ",${DEBUG}," in
     *,"${debuggee}${module:+:}${module}",*)
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) filespec=",${DEBUG},"; filespec="${filespec#*,@(debug|${scriptName})=}"; filespec="${filespec%%,*}"
-			    DEBUGTEE_SINK="$(realpath --no-symlinks -- "$filespec")" || DEBUGTEE_SINK="$filespec"
-			    ;;
-	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
+		DEBUGTEE_SINK="$(realpath --no-symlinks -- "$filespec")" || DEBUGTEE_SINK="$filespec"
+		;;
+	    *)	defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+		: ${DEBUG_SINK="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
+		;;
 	esac
 
 	sink="${DEBUGTEE_SINK-$DEBUG_SINK}"

@@ -5,7 +5,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[-I|--invert-match] [--for DEBUGGEE] [-x|--extension EXTENSION] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [--get-sink] [--] [IGNORED-ARG ...] [-?|-h|--help]'
+    printf 'Usage: [DEBUG[ENABLED]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s\n' "$(basename "$1")" '[-I|--invert-match] [--for DEBUGGEE] [-x|--extension EXTENSION] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [--get-sink] [--] [IGNORED-ARG ...] [-?|-h|--help]'
     echo
     printf 'Usage: [ -n "$DEBUG" ] && debugSink="$(%q %s)" && SCRIPT-FUNCTION > $debugSink\n' "$(basename "$1")" '... --get-sink'
     printf 'Usage: ! ${DEBUG:+%q %s} ${DEBUG:-:} || NDEBUG-COMMAND\n' "$(basename "$1")" '--invert-match ... --'
@@ -121,8 +121,10 @@ case ",${DEBUG}," in
     *,"${debuggee}${extension}${module:+:}${module}",*)
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGENABLED_SINK=",${DEBUG},"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK#*,@(debug|${scriptName})=}"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK%%,*}"
-			    ;;
-	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
+		;;
+	    *)	defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+		: ${DEBUG_SINK="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
+		;;
 	esac
 
 	$action

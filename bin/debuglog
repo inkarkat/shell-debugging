@@ -8,7 +8,7 @@ printShortUsage()
     [ "$isLogF" ] \
 	&& local args='[--prefix PREFIX [--prefix ...]] [--suffix SUFFIX [--suffix ...]] [--] FORMAT [ARG ...]' \
 	|| local args='[--] [MESSAGE ...]'
-    printf 'Usage: ${DEBUG:+[env DEBUG[LOG]_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")${isLogF:+f}" "[--for DEBUGGEE] [-m|--module MODULE] $args [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env DEBUG[LOG]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s}\n' "$(basename "$1")${isLogF:+f}" "[--for DEBUGGEE] [-m|--module MODULE] $args [-?|-h|--help]"
 }
 printUsage()
 {
@@ -26,8 +26,8 @@ ${isLogF:+Format and }Log MESSAGE (in the format TIMESTAMP (PID) MESSAGE ...) to
 file (DEBUGGEE.log) / \$DEBUGLOG_SINK / \$DEBUG_LOG if debugging is enabled for
 the caller:
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debug[log]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
-FILESPEC instead.
+With "DEBUG=debug[log]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to FILE
+instead.
 With "DEBUG=debug[log] DEBUGGEE ..." will show for what DEBUGGEE it will
 enable (if not actually enabled).
 HELPDESCRIPTION
@@ -88,8 +88,10 @@ case ",${DEBUG}," in
     *,"${debuggee}${module:+:}${module}",*)
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGLOG_SINK=",${DEBUG},"; DEBUGLOG_SINK="${DEBUGLOG_SINK#*,@(debug|${scriptName})=}"; DEBUGLOG_SINK="${DEBUGLOG_SINK%%,*}"
-			    ;;
-	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
+		;;
+	    *)	defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+		: ${DEBUG_SINK="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
+		;;
 	esac
 
 	setSink

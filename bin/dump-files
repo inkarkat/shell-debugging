@@ -7,8 +7,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [DUMPFILES_SINK=FILESPEC|&N|""] %q %s\n' "$(basename "$1")" '[-n|--number] [--no-header|-d|--description DESCRIPTION] [-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--] [-|FILE ...] [-?|-h|--help]'
-    printf 'Usage: ${DEBUG:+[env (DUMPFILES|DEBUG)_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" '-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE] ...'
+    printf 'Usage: [DUMPFILES_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s\n' "$(basename "$1")" '[-n|--number] [--no-header|-d|--description DESCRIPTION] [-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE]] [--] [-|FILE ...] [-?|-h|--help]'
+    printf 'Usage: ${DEBUG:+[env (DUMPFILES|DEBUG)_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s}\n' "$(basename "$1")" '-D|--on-debug [--for DEBUGGEE] [-m|--module MODULE] ...'
 }
 printUsage()
 {
@@ -113,7 +113,9 @@ if [ "$isOnDebug" ]; then
 		*,@(debug|${scriptName})=*,*)
 		    DUMPFILES_SINK=",${DEBUG},"; DUMPFILES_SINK="${DUMPFILES_SINK#*,@(debug|${scriptName})=}"; DUMPFILES_SINK="${DUMPFILES_SINK%%,*}"
 		    ;;
-		*)  : ${DEBUG_SINK:="${PWD}/${debuggee//:/-}.log"};;
+		*)  defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+		    : ${DEBUG_SINK:="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
+		    ;;
 	    esac
 	    ;;
 	*,@(debug|${scriptName}),*)

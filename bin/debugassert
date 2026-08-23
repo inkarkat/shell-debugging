@@ -9,7 +9,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+[env DEBUG[ASSERT]_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [-d|--description DESCRIPTION|-D|--assertion DESCRIPTION] [-v|--unexpected VALUE] [-e|--errexit] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGASSERT_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+[env DEBUG[ASSERT]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [-d|--description DESCRIPTION|-D|--assertion DESCRIPTION] [-v|--unexpected VALUE] [-e|--errexit] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${DEBUGASSERT_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -27,8 +27,8 @@ Execute COMMAND(s) if debugging is enabled for the caller and report an
 unsuccessful execution (and/or any output from COMMAND(s)) in a debug file
 (DEBUGGEE.log) / \$DEBUGASSERT_SINK / \$DEBUG_LOG:
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debug[assert]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
-FILESPEC instead.
+With "DEBUG=debug[assert]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to FILE
+instead.
 With "DEBUG=debug[assert] DEBUGGEE ..." will show for what DEBUGGEE it will
 assert (if not actually asserting).
 HELPDESCRIPTION
@@ -158,8 +158,10 @@ case ",${DEBUG}," in
     *,"${debuggee}${module:+:}${module}",*)
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGASSERT_SINK=",${DEBUG},"; DEBUGASSERT_SINK="${DEBUGASSERT_SINK#*,@(debug|${scriptName})=}"; DEBUGASSERT_SINK="${DEBUGASSERT_SINK%%,*}"
-			    ;;
-	    *)		    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
+		;;
+	    *)	defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+		: ${DEBUG_SINK="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
+		;;
 	esac
 
 	output="$($errExit; eval "$commands" 2>&1)"; status=$?	# Note: Cannot use if output="$(...)" because that makes "set -e" ignore the failure.
