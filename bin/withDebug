@@ -174,7 +174,7 @@ addCommand()
 	done
 
 	if contains '&' "${extensions[@]}" || [ "$isTraceCommand" ]; then
-	    local commandFilespec="$(extractCommandName --full-filespec "$cmd")"
+	    local commandFilespec="$(extractCommandName --full-filespec "$cmd")"    # We need the full filespec resolved through PATH for the trace support check.
 	    if [ -z "$commandFilespec" ]; then
 		printf >&2 'ERROR: Could not locate command %s\n' "$commandName"
 	    elif hasTraceSupport "$commandFilespec"; then
@@ -186,7 +186,10 @@ addCommand()
 		else
 		    [ ! "$isVerbose" ] \
 			|| printf >&2 '%s%s has no built-in debugtrace support.\n' "${PS4:-\$ }" "$commandName"
-		    printf -v cmd '(BASH_ARGV0=%q; set -x; . %s)' "$commandFilespec" "$cmd"
+		    # source doesn't understand VAR=VAL; these need to be put in front of it; i.e.
+		    # we need to inject source at the right place in $cmd.
+		    local extractedCommand="$(extractCommandName --keep-filespec "$cmd")"   # We need the actual filespec as given for injection of the source command.
+		    printf -v cmd '(BASH_ARGV0=%q; set -x; %s)' "$extractedCommand" "${cmd/"$extractedCommand"/"source $extractedCommand"}"
 		fi
 	    fi
 	fi
