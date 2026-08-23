@@ -46,3 +46,7 @@ completeAsCommand ds dsa
 #			the original command.
 alias dr='withDebug --recall'
 optionmunge -s : HISTIGNORE 'dr:dr *'
+
+# dm			Open the last debug log used by withDebug in the pager.
+alias dm='debug-recall'
+optionmunge -s : HISTIGNORE 'dm:dm *'
