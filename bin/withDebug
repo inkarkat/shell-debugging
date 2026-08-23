@@ -507,9 +507,9 @@ if [ -n "$programName" ]; then
     if [ "$isInteractive" ]; then
 	printf -v commands 'bash -i -c %q' "$commands"
     fi
-    : ${sink="${programName}.log"}
+    : ${sink="${PWD}/${programName}.log"}
 else
-    : ${sink="${commandNames[0]:?}.log"}
+    : ${sink="${PWD}/${commandNames[0]:?}.log"}
 fi
 
 if [ ${#captureCommand[@]} -gt 0 ]; then
