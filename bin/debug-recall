@@ -1,0 +1,65 @@
+#!/bin/bash
+
+: ${DEBUG_LOGDIR="${XDG_RUNTIME_DIR:-/tmp}/debug"}
+
+debugRecall()
+{
+    FILERECALL="$(basename -- "$0")" \
+    FILERECALL_BASEDIR="$DEBUG_LOGDIR" \
+    FILERECALL_WHAT='debug log' \
+    FILERECALL_OFFER_SUBDIRS='' \
+	exec file-recall "$@"
+}
+
+printUsage()
+{
+    cat <<HELPTEXT
+Open the last debug log used by withDebug in the pager.
+HELPTEXT
+    echo
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[-?|-h|--help]'
+    echo
+    cat <<HELPTEXT
+Open all debug log files used by withDebug (last modified first) in the pager.
+HELPTEXT
+    echo
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-a|--all'
+    echo
+    debugRecall --help
+}
+
+typeset -a pager=("${PAGER:-less}" --RAW-CONTROL-CHARS); [ -t 1 ] || pager=(cat)
+action=
+case "$1" in
+    --help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+    --all|-a)		shift; action=pageAll;;
+esac
+
+pageAll()
+{
+    readarray -t filespecsByCreation < <(ls -1 --sort=time "$DEBUG_LOGDIR"/*)
+    if [ ${#filespecsByCreation[@]} -eq 0 ]; then
+	echo >&2 'ERROR: No debug log files found.'
+	exit 1
+    fi
+
+    exec "${pager[@]}" -- "${filespecsByCreation[@]}"
+}
+
+if [ -z "$action" -a $# -eq 0 ]; then
+    DATA_DIRSPEC="${XDG_DATA_HOME:-${HOME}/.local/share}"
+    WITHDEBUG_LASTLOG_FILESPEC="${DATA_DIRSPEC}/withDebug-last-log"
+    lastDebugLogFilespec=; [ -r "$WITHDEBUG_LASTLOG_FILESPEC" ] \
+	&& <"$WITHDEBUG_LASTLOG_FILESPEC" IFS=$'\n' read -r lastDebugLogFilespec \
+	&& [ -r "$lastDebugLogFilespec" ] \
+	|| exit 1
+
+    exec "${pager[@]}" "$lastDebugLogFilespec"
+else
+    if [ ! -d "$DEBUG_LOGDIR" ]; then
+	echo >&2 'ERROR: No debug log directory found.'
+	exit 5
+    fi
+
+    ${action:-debugRecall} "$@"
+fi
