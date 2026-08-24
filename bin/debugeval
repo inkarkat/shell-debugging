@@ -10,7 +10,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: [DEBUG[EVAL]_SINK=FILESPEC|&N|""] %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-?|-h|--help] ...'
+    printf 'Usage: [DEBUG[EVAL]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-?|-h|--help] ...'
     printf 'Usage: eval $(${DEBUG:+%q %s} "${DEBUG:-echo}" %s)\n' "$(basename "$1")" '... --' 'SIMPLECOMMAND [...]'
     printf 'Usage: eval $(${DEBUG:+%q %s} "${DEBUG:-echo}" %s)\n' "$(basename "$1")" '... -c|--command' '"COMMANDLINE"'
 }
@@ -56,8 +56,8 @@ successful.
 
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debug[eval]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
-FILESPEC instead.
+With "DEBUG=debug[eval]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to FILE
+instead.
 With "DEBUG=debug[eval] DEBUGGEE ..." will show for what DEBUGGEE it will
 enable (if not actually enabled).
 HELPDESCRIPTION
@@ -170,7 +170,9 @@ fi
 case ",${DEBUG}," in
     *,@(debug|${scriptName})=*,*) DEBUGEVAL_SINK=",${DEBUG},"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK#*,@(debug|${scriptName})=}"; DEBUGEVAL_SINK="${DEBUGEVAL_SINK%%,*}"
 	;;
-    *)  : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
+    *)  defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+	: ${DEBUG_SINK="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
+	;;
 esac
 
 sink="${DEBUGEVAL_SINK-$DEBUG_SINK}"

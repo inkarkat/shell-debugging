@@ -1,0 +1,40 @@
+#!/bin/bash
+
+: ${DEBUG_LOGDIR="${XDG_RUNTIME_DIR:-/tmp}/debug"}
+
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: %q %s\n' "$(basename "$1")" "$(rmdircontents --get-short-usage 2>/dev/null) [-?|-h|--help]"
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Remove all debug log files created by withDebug in the debug log directory.
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    rmdircontents --get-long-usage 2>/dev/null
+}
+
+case "$1" in
+    --help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+esac
+
+if [ ! -d "$DEBUG_LOGDIR" ]; then
+    echo >&2 'No debug log directory found.'
+    exit 99
+fi
+
+exec rmdircontents -- "$DEBUG_LOGDIR"

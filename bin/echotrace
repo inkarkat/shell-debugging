@@ -84,7 +84,7 @@ printShortUsage()
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
     printf 'Usage: %q %s\n' "$(basename "$1")" "$(getShortUsage debug io debug-io) [-?|-h|--help] ..."
-    printf 'Usage: ${DEBUG:+[env ECHOTRACE_IFS=STRING|newline] [(ECHOTRACE|DEBUG)_SINK=FILESPEC|&N|""] %q %s} %s\n' "$(basename "$1")" '... [--]' 'COMMAND [...]'
+    printf 'Usage: ${DEBUG:+[env ECHOTRACE_IFS=STRING|newline] [(ECHOTRACE|DEBUG)_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s} %s\n' "$(basename "$1")" '... [--]' 'COMMAND [...]'
     printf 'Usage: ${DEBUG:+%q %s} %s\n' "$(basename "$1")" '... --eval [--]' 'eval COMMAND [...]'
 }
 printUsage()
@@ -212,7 +212,8 @@ setSink()
     esac
     timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
 
-    : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"}
+    local defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+    : ${DEBUG_SINK="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
     sink="${ECHOTRACE_SINK-$DEBUG_SINK}"
     case "$sink" in
 	'')		exec 3>&2;;

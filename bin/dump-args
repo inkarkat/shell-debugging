@@ -66,7 +66,7 @@ printShortUsage()
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
     printf 'Usage: %q %s\n' "$(basename "$1")" "$(getShortUsage general) [--] [ARG ...] [-?|-h|--help]"
-    printf 'Usage: ${DEBUG:+[env (DUMPARGS|DEBUG)_SINK=FILESPEC|&N|""] %q %s}\n' "$(basename "$1")" "$(getShortUsage debug) ..."
+    printf 'Usage: ${DEBUG:+[env (DUMPARGS|DEBUG)_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s}\n' "$(basename "$1")" "$(getShortUsage debug) ..."
 }
 printUsage()
 {
@@ -170,7 +170,9 @@ if [ "$isOnDebug" ]; then
 		*,@(debug|${scriptName})=*,*)
 		    DUMPARGS_SINK=",${DEBUG},"; DUMPARGS_SINK="${DUMPARGS_SINK#*,@(debug|${scriptName})=}"; DUMPARGS_SINK="${DUMPARGS_SINK%%,*}"
 		    ;;
-		*)  : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
+		*)  defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+		    : ${DEBUG_SINK="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
+		    ;;
 	    esac
 	    timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
 	    ;;

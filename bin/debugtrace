@@ -13,7 +13,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+eval $([DEBUG[TRACE]_SINK=FILESPEC|&N|""] %q %s)}\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-o $-] [-- "$@"] [-?|-h|--help]'
+    printf 'Usage: ${DEBUG:+eval $([DEBUG[TRACE]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s)}\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-o $-] [-- "$@"] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -53,8 +53,8 @@ are only considered if PREDICATE is successful.
 
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGTRACE_SINK / \$DEBUG_SINK.
 DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debug[trace]=FILESPEC,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to
-FILESPEC instead.
+With "DEBUG=debug[trace]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to FILE
+instead.
 With "DEBUG=debug[trace] DEBUGGEE ..." will show for what DEBUGGEE it will
 enable (if not actually enabled).
 HELPDESCRIPTION
@@ -149,7 +149,9 @@ fi
 case ",${DEBUG}," in
     *,@(debug|${scriptName})=*,*) DEBUGTRACE_SINK=",${DEBUG},"; DEBUGTRACE_SINK="${DEBUGTRACE_SINK#*,@(debug|${scriptName})=}"; DEBUGTRACE_SINK="${DEBUGTRACE_SINK%%,*}"
 	;;
-    *)  : ${DEBUG_SINK="${PWD}/${debuggee//:/-}.log"};;
+    *)  defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+	: ${DEBUG_SINK="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
+	;;
 esac
 
 sink="${DEBUGTRACE_SINK-$DEBUG_SINK}"

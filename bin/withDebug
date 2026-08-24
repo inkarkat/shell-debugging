@@ -9,6 +9,10 @@ readonly WITHDEBUG_RECALL_FILESPEC="${DATA_DIRSPEC}/withDebug-recall"
 readonly WITHDEBUG_SAME_FILESPEC="${DATA_DIRSPEC}/withDebug-same"
 readonly WITHDEBUG_LASTLOG_FILESPEC="${DATA_DIRSPEC}/withDebug-last-log"
 
+: ${DEBUG_LOGDIR="${XDG_RUNTIME_DIR:-/tmp}/debug"}; export DEBUG_LOGDIR
+[ -z "$DEBUG_LOGDIR" -o -d "$DEBUG_LOGDIR" ] || mkdir --parents -- "$DEBUG_LOGDIR" || { printf >&2 'ERROR: Could not initialize default log directory at %s\n' "$DEBUG_LOGDIR"; exit 3; }
+defaultLogDirspec="${DEBUG_LOGDIR-$PWD}"
+
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
@@ -46,7 +50,8 @@ HELPDESCRIPTION
     --no-pager|-P	Don't open the debugging diagnostics in the pager after
 			the execution.
     --to FILE		Write the debugging diagnostics into FILE instead of the
-			default COMMAND.log (using the first passed COMMAND).
+			default COMMAND.log (using the first passed COMMAND) in
+			\$DEBUG_LOGDIR (${DEBUG_LOGDIR}).
     --inbox|-i		Write the debugging diagnostics into the inbox.
     --to-separate-files|-s
 			Let each COMMAND write its debugging diagnostics into a
@@ -489,10 +494,11 @@ if [ ! "$isListTargets" ]; then
 fi
 
 if [ "$isVerbose" ]; then
+    logDirVariable=; [ -z "$DEBUG_LOGDIR" ] || printf -v logDirVariable 'DEBUG_LOGDIR=%q' "$DEBUG_LOGDIR"
     if [ $commandCnt -eq 1 ]; then
-	printf >&2 '%sDEBUG=%q %s\n' "${PS4:-\$ }" "$DEBUG" "$commands"
+	printf >&2 '%sDEBUG=%q%s %s\n' "${PS4:-\$ }" "$DEBUG" "${logDirVariable:+ }${logDirVariable}" "$commands"
     else
-	printf >&2 '%s{ DEBUG=%q; %s; }\n' "${PS4:-\$ }" "$DEBUG" "$commands"
+	printf >&2 '%s{ DEBUG=%q%s; %s; }\n' "${PS4:-\$ }" "$DEBUG" "${logDirVariable:+; }${logDirVariable}" "$commands"
     fi
 fi
 
@@ -507,9 +513,9 @@ if [ -n "$programName" ]; then
     if [ "$isInteractive" ]; then
 	printf -v commands 'bash -i -c %q' "$commands"
     fi
-    : ${sink="${programName}.log"}
+    : ${sink="${defaultLogDirspec}${defaultLogDirspec:+/}${programName}.log"}
 else
-    : ${sink="${commandNames[0]:?}.log"}
+    : ${sink="${defaultLogDirspec}${defaultLogDirspec:+/}${commandNames[0]:?}.log"}
 fi
 
 if [ ${#captureCommand[@]} -gt 0 ]; then
