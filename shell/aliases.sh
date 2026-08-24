@@ -50,3 +50,8 @@ optionmunge -s : HISTIGNORE 'dr:dr *'
 # dm			Open the last debug log used by withDebug in the pager.
 alias dm='debug-recall'
 optionmunge -s : HISTIGNORE 'dm:dm *'
+
+# dc			Remove all debug log files created by withDebug in the
+#			debug log directory.
+alias dc='debug-clear'
+optionmunge -s : HISTIGNORE 'dc:dc *'
