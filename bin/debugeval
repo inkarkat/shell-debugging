@@ -83,6 +83,9 @@ SEE ALSO:
   sink; prefer for the conditional execution of traps or script-local
   functionality if you don't need the additional embellishments provided by
   debugeval.
+- testeval is a variant that triggers on TEST instead of DEBUG and does not
+  write execution traces nor supports trace enablement, and is intended for
+  implementing test hooks.
 HELPTEXT
 }
 
