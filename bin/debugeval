@@ -51,7 +51,7 @@ When \$DEBUG refers to DEBUGGEE+=SUFFIX, SUFFIX is put after COMMAND for
 execution by the invoking eval and additionally written as an execution trace.
 When \$DEBUG refers to DEBUGGEE?PREDICATE, COMMAND is printed for execution by
 the invoking eval (or not printed / replaced / embellished according to any
-other instructions) and only also written as an execution trace if PREDICATE is
+other instructions) and also written as an execution trace only if PREDICATE is
 successful.
 
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
