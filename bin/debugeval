@@ -10,7 +10,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: [DEBUG[EVAL]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-?|-h|--help] ...'
+    printf 'Usage: [DEBUG[EVAL]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--piped] [--to FILE] [-?|-h|--help] ...'
     printf 'Usage: eval $(${DEBUG:+%q %s} "${DEBUG:-echo}" %s)\n' "$(basename "$1")" '... --' 'SIMPLECOMMAND [...]'
     printf 'Usage: eval $(${DEBUG:+%q %s} "${DEBUG:-echo}" %s)\n' "$(basename "$1")" '... -c|--command' '"COMMANDLINE"'
 }
@@ -69,6 +69,9 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
+    --piped		Indicate that the COMMAND is part of a pipeline.
+			Multiple OTHER-COMMANDs are joined with "|" instead of
+			";" then.
     --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
 			for printing the execution trace, command tracing and
 			time reporting and just leave a reference to FILE there.
@@ -92,12 +95,14 @@ debuggee="$DEBUG_DEBUGGEE"
 module=
 toFile=
 commands=
+commandJoiner=';'
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
+	--piped)	shift; commandJoiner='|';;
 	--to)		shift; toFile="${1:?}"; shift;;
 	--command|-c)	shift
 			assertSingleCommand "$*"
@@ -255,7 +260,7 @@ case ",${DEBUG}," in
 		printfToSink '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    else
 		[ "$hasOtherCommand" ] || commands=''
-		commands+="${commands:+; }${otherCommand}"
+		commands+="${commands:+$commandJoiner }${otherCommand}"
 		hasOtherCommand=t
 		export PS4='= '
 	    fi
