@@ -25,11 +25,11 @@ printLongUsage()
 ${isLogF:+Format and }Log MESSAGE (in the format TIMESTAMP (PID) MESSAGE ...) to a debug
 file (DEBUGGEE.log) / \$DEBUGLOG_SINK / \$DEBUG_LOG if debugging is enabled for
 the caller:
-DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debug[log]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to FILE
-instead.
-With "DEBUG=debug[log] DEBUGGEE ..." will show for what DEBUGGEE it will
-enable (if not actually enabled).
+\$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+\$ DEBUG=debug[log]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
+  instead.
+\$ DEBUG=debug[log] DEBUGGEE ... will show for what DEBUGGEE it will enable (if
+  not actually enabled).
 HELPDESCRIPTION
     echo
     printShortUsage "$1"

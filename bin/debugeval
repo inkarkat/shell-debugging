@@ -30,6 +30,9 @@ If debugging is not enabled for the caller, simply print COMMAND so that the
 invoking eval executes it normally.
 When \$DEBUG refers plainly to the DEBUGGEE, COMMAND is printed for execution by
 the invoking eval and additionally written as an execution trace.
+\$ DEBUG=DEBUGGEE[:MODULE][EXTENSION] DEBUGGEE ...
+
+Extensions:
 When \$DEBUG refers to DEBUGGEE!, COMMAND is NOT printed / executed and just
 written as an execution trace.
 When \$DEBUG refers to DEBUGGEE&, COMMAND is printed for execution with tracing
@@ -55,11 +58,10 @@ other instructions) and also written as an execution trace only if PREDICATE is
 successful.
 
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
-DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debug[eval]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to FILE
-instead.
-With "DEBUG=debug[eval] DEBUGGEE ..." will show for what DEBUGGEE it will
-enable (if not actually enabled).
+\$ DEBUG=debug[eval]=FILE,DEBUGGEE[:MODULE][EXTENSION] DEBUGGEE ... will log to
+  FILE instead.
+\$ DEBUG=debug[eval] DEBUGGEE ... will show for what DEBUGGEE it will enable (if
+  not actually enabled).
 HELPDESCRIPTION
     echo
     printShortUsage "$1"

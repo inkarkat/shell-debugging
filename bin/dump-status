@@ -33,10 +33,10 @@ HELPDESCRIPTION
     --on-debug|-D	Log the exit status to a debug file (DEBUGGEE.log) only
 			when \$DEBUG refers to the DEBUGGEE, and print the debug
 			filespec to the terminal.
-$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-$ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a
+\$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+\$ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a
   custom FILE instead.
-$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will
+\$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will
   enable (if not actually enabled).
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.
