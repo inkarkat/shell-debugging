@@ -150,13 +150,10 @@ typeset -a debugCommand=(verbose "${verboseArgs[@]}" --on-debug)
 typeset -a debugCommandArgs=(--for "$debuggee" ${module:+--module "$module"})
 case ",${DEBUG}," in
     *,"${debuggee}!${module:+:}${module}",*)
-	debugCommand=(echotrace "${echotraceArgs[@]}")
-	debugCommandArgs=(--for "${debuggee}!" ${module:+--module "$module"})
-	setSinkAndExecute "$@"
-	;;
+	;&
     *,"${debuggee}!":*,*)	# Also activate on any module so that echotrace's --io-modules|--stdin-module options will be considered. echotrace will do proper module filtering, anyway; it's just a bit more inefficient.
 	debugCommand=(echotrace "${echotraceArgs[@]}")
-	debugCommandArgs=(--for "${debuggee}!")
+	export ECHOTRACE_SIGIL='!'
 	setSinkAndExecute "$@"
 	;;
     *,"${debuggee}${module:+:}${module}",*)

@@ -233,21 +233,21 @@ if [ -z "$debuggee" ]; then
 fi
 
 case ",${DEBUG}," in
-    *,"${debuggee}:${stdinModule}",*)
+    *,"${debuggee}${ECHOTRACE_SIGIL}:${stdinModule}",*)
 	setSink
 	isLogStdin=t
 	;;
-    *,"${debuggee}${module:+:}${module}",*)
+    *,"${debuggee}${ECHOTRACE_SIGIL}${module:+:}${module}",*)
 	setSink
 	;;
     *,@(debug|${scriptName}),*)
 	setSink
 	if [ "$isLogStdin" ]; then
-	    printf >&3 '%s: Will skip command execution and just log the command and stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    printf >&3 '%s: Will skip command execution and just log the command and stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${ECHOTRACE_SIGIL}${module:+:}${module}"
 	elif [ -n "$stdinModule" ]; then
-	    printf >&3 '%s: Will skip command execution and just log the command with DEBUG=%q, stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}" "${debuggee}:${stdinModule}"
+	    printf >&3 '%s: Will skip command execution and just log the command with DEBUG=%q, stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${ECHOTRACE_SIGIL}${module:+:}${module}" "${debuggee}${ECHOTRACE_SIGIL}:${stdinModule}"
 	else
-	    printf >&3 '%s: Will skip command execution and just log the command with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	    printf >&3 '%s: Will skip command execution and just log the command with DEBUG=%q\n' "$scriptName" "${debuggee}${ECHOTRACE_SIGIL}${module:+:}${module}"
 	fi
 	;&
     *)  executor "$@"
