@@ -290,7 +290,7 @@ case ",${DEBUG}," in
 		    else
 			actions+=("outputting ${expandedFilespec}${exitStatus:+ and exiting with $exitStatus}")
 		    fi
-		    printf -v commands 'cat %q%s' "$expandedFilespec" "; exit${exitStatus:+ }${exitStatus}"
+		    printf -v commands '%scat %q%s' "${exitStatus:+(}" "$expandedFilespec" "${exitStatus:+; exit ${exitStatus})}"
 		    export PS4='@ '
 		    previousFilespec="$filespec"
 		else
