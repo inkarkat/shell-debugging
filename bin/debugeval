@@ -10,7 +10,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: [DEBUG[EVAL]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-?|-h|--help] ...'
+    printf 'Usage: [DEBUG[EVAL]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--piped] [--to FILE] [-?|-h|--help] ...'
     printf 'Usage: eval $(${DEBUG:+%q %s} "${DEBUG:-echo}" %s)\n' "$(basename "$1")" '... --' 'SIMPLECOMMAND [...]'
     printf 'Usage: eval $(${DEBUG:+%q %s} "${DEBUG:-echo}" %s)\n' "$(basename "$1")" '... -c|--command' '"COMMANDLINE"'
 }
@@ -51,7 +51,7 @@ When \$DEBUG refers to DEBUGGEE+=SUFFIX, SUFFIX is put after COMMAND for
 execution by the invoking eval and additionally written as an execution trace.
 When \$DEBUG refers to DEBUGGEE?PREDICATE, COMMAND is printed for execution by
 the invoking eval (or not printed / replaced / embellished according to any
-other instructions) and only also written as an execution trace if PREDICATE is
+other instructions) and also written as an execution trace only if PREDICATE is
 successful.
 
 Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
@@ -69,6 +69,9 @@ HELPDESCRIPTION
 			parent process.
     --module|-m MODULE	Activate only if debugging for MODULE of the DEBUGGEE is
 			enabled.
+    --piped		Indicate that the COMMAND is part of a pipeline.
+			Multiple OTHER-COMMANDs are joined with "|" instead of
+			";" then.
     --to FILE		Use FILE instead of the default debug file DEBUGGEE.log
 			for printing the execution trace, command tracing and
 			time reporting and just leave a reference to FILE there.
@@ -80,6 +83,9 @@ SEE ALSO:
   sink; prefer for the conditional execution of traps or script-local
   functionality if you don't need the additional embellishments provided by
   debugeval.
+- testeval is a variant that triggers on TEST instead of DEBUG and does not
+  write execution traces nor supports trace enablement, and is intended for
+  implementing test hooks.
 HELPTEXT
 }
 
@@ -92,12 +98,14 @@ debuggee="$DEBUG_DEBUGGEE"
 module=
 toFile=
 commands=
+commandJoiner=';'
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--for)		shift; debuggee="${1?}"; shift;;
 	--module|-m)	shift; module="${1:?}"; shift;;
+	--piped)	shift; commandJoiner='|';;
 	--to)		shift; toFile="${1:?}"; shift;;
 	--command|-c)	shift
 			assertSingleCommand "$*"
@@ -255,7 +263,7 @@ case ",${DEBUG}," in
 		printfToSink '%s: Warning: Empty OTHER-COMMAND given for %q (better use DEBUGGEE!)\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	    else
 		[ "$hasOtherCommand" ] || commands=''
-		commands+="${commands:+; }${otherCommand}"
+		commands+="${commands:+$commandJoiner }${otherCommand}"
 		hasOtherCommand=t
 		export PS4='= '
 	    fi
