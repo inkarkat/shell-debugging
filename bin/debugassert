@@ -26,11 +26,11 @@ printLongUsage()
 Execute COMMAND(s) if debugging is enabled for the caller and report an
 unsuccessful execution (and/or any output from COMMAND(s)) in a debug file
 (DEBUGGEE.log) / \$DEBUGASSERT_SINK / \$DEBUG_LOG:
-DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debug[assert]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to FILE
-instead.
-With "DEBUG=debug[assert] DEBUGGEE ..." will show for what DEBUGGEE it will
-assert (if not actually asserting).
+\$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+\$ DEBUG=debug[assert]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
+  instead.
+\$ DEBUG=debug[assert] DEBUGGEE ... will show for what DEBUGGEE it will assert
+  (if not actually asserting).
 HELPDESCRIPTION
     echo
     printShortUsage "$1"

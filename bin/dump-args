@@ -44,10 +44,10 @@ HELPTEXT
     --on-debug|-D	Log ARG(s) to a debug file (DEBUGGEE.log) only when
 			\$DEBUG refers to the DEBUGGEE, and print the debug
 			filespec to the terminal.
-$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-$ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
+\$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+\$ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
   FILE instead.
-$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will enable
+\$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will enable
   (if not actually enabled).
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
 			parent process.

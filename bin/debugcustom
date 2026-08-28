@@ -27,11 +27,11 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 Execute COMMAND(s) if debugging is enabled for the caller; any output will be
 collected in a debug file (DEBUGGEE.log) / \$DEBUGCUSTOM_SINK / \$DEBUG_LOG:
-DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-With "DEBUG=debug[custom]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ..." will log to FILE
-instead.
-With "DEBUG=debug[custom] DEBUGGEE ..." will show for what DEBUGGEE it will
-enable (if not actually enabled).
+\$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
+\$ DEBUG=debug[custom]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
+  instead.
+\$ DEBUG=debug[custom] DEBUGGEE ... will show for what DEBUGGEE it will enable
+  (if not actually enabled).
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
