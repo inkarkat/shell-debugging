@@ -340,7 +340,7 @@ else
     case ",${DEBUG}," in
 	*,@(debug|${scriptName}),*)
 	    quotedModule=; [ -n "$module" ] && printf -v quotedModule %q "$module"
-	    printfToSink '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" '[![N]|&'"$tracePointName"'|=OTHER-COMMAND|@[N-]FILE|/[[PATTERN]/]REPLACEMENT/|?PREDICATE]' "${module:+:}${quotedModule}"
+	    printfToSink '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" "${module:+:}${quotedModule}" '[![N]|&'"$tracePointName"'|=OTHER-COMMAND|@[N-]FILE|/[[PATTERN]/]REPLACEMENT/|?PREDICATE]'
 	    ;;
     esac
 fi

@@ -136,7 +136,7 @@ addDebug()
 
 	local extension; for extension in "${debugExtensions[@]}"
 	do
-	    add "${commandName}${extension}${module:+:}${module}"
+	    add "${commandName}${module:+:}${module}${extension}"
 	done
     done
 }

@@ -238,18 +238,18 @@ case ",${DEBUG}," in
     *,"${debuggee}${module:+:}${module}",*)
 	isActive=t
 	;;
-    *,"${debuggee}!${module:+:}${module}",*)
+    *,"${debuggee}${module:+:}${module}!",*)
 	isActive=t
 	export PS4='! '
 	action=logCommands
 	;;
-    *,"${debuggee}&${module:+:}${module}",*)
+    *,"${debuggee}${module:+:}${module}&",*)
 	isActive=t
 	handleToFile
 	silentCommandPrefix="${traceRedir}; set -x; "
 	silentCommandSuffix='; set +x'
 	;;
-    *,"${debuggee}~${module:+:}${module}",*)
+    *,"${debuggee}${module:+:}${module}~",*)
 	isActive=t
 	handleToFile
 	silentCommandPrefix='{ TIMEFORMAT="real %3lR, user %3lU, sys %3lS"; time '
@@ -326,7 +326,7 @@ else
     case ",${DEBUG}," in
 	*,@(debug|${scriptName}),*)
 	    quotedModule=; [ -n "$module" ] && printf -v quotedModule %q "$module"
-	    printfToSink '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" '[!|&|~|=OTHER-COMMAND|@[N-]FILE|^=PREFIX|+=SUFFIX|?PREDICATE]' "${module:+:}${quotedModule}"
+	    printfToSink '%s: Will activate with DEBUG=%q%s%s\n' "$scriptName" "${debuggee}" "${module:+:}${quotedModule}" '[!|&|~|=OTHER-COMMAND|@[N-]FILE|^=PREFIX|+=SUFFIX|?PREDICATE]'
 	    ;;
     esac
 

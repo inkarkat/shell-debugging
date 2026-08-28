@@ -118,7 +118,7 @@ if [ -z "$debuggee" ]; then
 fi
 
 case ",${DEBUG}," in
-    *,"${debuggee}${extension}${module:+:}${module}",*)
+    *,"${debuggee}${module:+:}${module}${extension}",*)
 	case ",${DEBUG}," in
 	    *,@(debug|${scriptName})=*,*) DEBUGENABLED_SINK=",${DEBUG},"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK#*,@(debug|${scriptName})=}"; DEBUGENABLED_SINK="${DEBUGENABLED_SINK%%,*}"
 		;;
@@ -132,7 +132,7 @@ case ",${DEBUG}," in
 	;;
     *,@(debug|${scriptName}),*)
 	setSink
-	printf '%s: Will %s with DEBUG=%q\n' "$scriptName" "${description:-activate}" "${debuggee}${extension}${module:+:}${module}"
+	printf '%s: Will %s with DEBUG=%q\n' "$scriptName" "${description:-activate}" "${debuggee}${module:+:}${module}${extension}"
 	;;
 esac
 exit $disabledStatus

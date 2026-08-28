@@ -8,9 +8,9 @@ debugConsumeDirectiveInto()
     [ -n "${remainingDebug+t}" ] || remainingDebug=",${DEBUG},"
 
     case "$remainingDebug" in
-	*,"${debuggee}${sigil}"*([^:,])"${module:+:}${module}",*)
-	    directiveRef=",${remainingDebug},"; directiveRef="${directiveRef#*,${debuggee}${sigil}}"; directiveRef="${directiveRef%%${module:+:}${module},*}"
-	    remainingDebug="${remainingDebug/",${debuggee}${sigil}${directiveRef}${module:+:}${module},"/,}"
+	*,"${debuggee}${module:+:}${module}${sigil}"*([^,]),*)
+	    directiveRef=",${remainingDebug},"; directiveRef="${directiveRef#*,${debuggee}${module:+:}${module}${sigil}}"; directiveRef="${directiveRef%%,*}"
+	    remainingDebug="${remainingDebug/",${debuggee}${module:+:}${module}${sigil}${directiveRef},"/,}"
 	    return 0
 	    ;;
 
