@@ -137,6 +137,15 @@ setSinkAndExecute()
     exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
 }
 
+printfToSink()
+{
+    case "$sink" in
+	'')		printf "$@" >&2;;
+	\&+([0-9]))	eval "printf \"\$@\" >$sink";;
+	?*)		printf "$@" >>"$sink";;
+    esac
+}
+
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 if [ -z "$debuggee" ]; then
     {
@@ -163,12 +172,7 @@ case ",${DEBUG}," in
 	;;
     *,@(debug|${scriptName}|verbose),*)
 	setSinkDefaults; sink="${DEBUGCOMMAND_SINK-$DEBUG_SINK}"
-	case "$sink" in
-	    '')		exec >&2;;
-	    \&+([0-9]))	eval "exec >$sink";;
-	    ?*)		exec >>"$sink";;
-	esac
-	printf '%s: Will log [and skip] command execution with DEBUG=%q[!]\n' "$scriptName" "${debuggee}${module:+:}${module}"
+	printfToSink '%s: Will log [and skip] command execution with DEBUG=%q[!]\n' "$scriptName" "${debuggee}${module:+:}${module}"
 	exec "${debugCommand[@]}" "${debugCommandArgs[@]}" -- "$@"
 	;;
 esac
