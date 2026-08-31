@@ -89,7 +89,10 @@ setSink()
 
     sink="${DUMPFILES_SINK:-${isOnDebug:+$DEBUG_SINK}}"
     case "$sink" in
-	'')		exec >&2;;
+	'')		[ -n "$BATS_TEST_NAME" ] \
+			    && exec >&3 \
+			    || exec >&2
+			;;
 	\&+([0-9]))	eval "exec >$sink";;
 	/dev/tty)	colorArg=();;&
 	?*)		exec >>"$sink";;

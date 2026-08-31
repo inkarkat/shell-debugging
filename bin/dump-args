@@ -146,7 +146,10 @@ setSink()
 
     sink="${DUMPARGS_SINK:-${isOnDebug:+$DEBUG_SINK}}"
     case "$sink" in
-	'')		exec >&2;;
+	'')		[ -n "$BATS_TEST_NAME" ] \
+			    && exec >&3 \
+			    || exec >&2
+			;;
 	\&+([0-9]))	eval "exec >$sink";;
 	?*)		exec >>"$sink";;
     esac

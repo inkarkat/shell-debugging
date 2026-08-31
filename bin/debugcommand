@@ -140,7 +140,10 @@ setSinkAndExecute()
 printfToSink()
 {
     case "$sink" in
-	'')		printf "$@" >&2;;
+	'')		[ -n "$BATS_TEST_NAME" ] \
+			    && printf "$@" >&3 \
+			    || printf "$@" >&2
+			;;
 	\&+([0-9]))	eval "printf \"\$@\" >$sink";;
 	?*)		printf "$@" >>"$sink";;
     esac

@@ -216,7 +216,9 @@ setSink()
     : ${DEBUG_SINK="${defaultLogDirspec}${defaultLogDirspec:+/}${debuggee//:/-}.log"}
     sink="${ECHOTRACE_SINK-$DEBUG_SINK}"
     case "$sink" in
-	'')		exec 3>&2;;
+	'')		[ -n "$BATS_TEST_NAME" ] \
+			    || exec 3>&2
+			;;
 	\&+([0-9]))	eval "exec 3>$sink";;
 	?*)		exec 3>>"$sink";;
     esac

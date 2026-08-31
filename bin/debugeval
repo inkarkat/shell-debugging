@@ -190,9 +190,15 @@ redir=
 sinkRedir=
 traceRedir=
 case "$sink" in
-    '')		redir='>&2'
-		sinkRedir="exec 3${redir}"
-		traceRedir='BASH_XTRACEFD=2'
+    '')		if [ -n "$BATS_TEST_NAME" ]; then
+		    redir='>&3'
+		    traceRedir='BASH_XTRACEFD=3'
+		    sinkRedir=''
+		else
+		    redir='>&2'
+		    traceRedir='BASH_XTRACEFD=2'
+		    sinkRedir="exec 3${redir}"
+		fi
 		;;
     \&+([0-9]))	redir=">$sink"
 		sinkRedir="exec 3${redir}"
