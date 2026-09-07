@@ -11,8 +11,8 @@ printShortUsage()
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
     printf 'Usage: [DEBUG[EVAL]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--piped] [--to FILE] [-?|-h|--help] ...'
-    printf 'Usage: eval $(${DEBUG:+%q %s} "${DEBUG:-echo}" %s)\n' "$(basename "$1")" '... --' 'SIMPLECOMMAND [...]'
-    printf 'Usage: eval $(${DEBUG:+%q %s} "${DEBUG:-echo}" %s)\n' "$(basename "$1")" '... -c|--command' '"COMMANDLINE"'
+    printf 'Usage: eval "$(${DEBUG:+%q %s} "${DEBUG:-printf}" "${DEBUG:- %%q}" %s)"\n' "$(basename "$1")" '... --' 'SIMPLECOMMAND [...]'
+    printf 'Usage: eval "$(${DEBUG:+%q %s} "${DEBUG:-echo}" %s)"\n' "$(basename "$1")" '... -c|--command' '"COMMANDLINE"'
 }
 printUsage()
 {
@@ -93,6 +93,23 @@ assertSingleCommand()
     [ -z "$commands" ] || { printf 'ERROR: COMMAND is allowed only once, but given "%s" and "%s" (minus "%s").\n' "$commands" "$1" "$DEBUG" >&2; exit 2; }
 }
 
+countDebugArgs()
+{
+    if [ -z "$DEBUG" ]; then
+	case "$1" in
+	    echo)	printf 1;;
+	    printf)	printf 2;;
+	    *)		printf 0;;
+	esac
+    else
+	for ((i = 0; i < $#; i++))
+	do
+	    [ "${*:i+1:1}" = "$DEBUG" ] || break
+	done
+	printf %d $i
+    fi
+}
+
 debuggee="$DEBUG_DEBUGGEE"
 module=
 toFile=
@@ -108,11 +125,11 @@ do
 	--to)		shift; toFile="${1:?}"; shift;;
 	--command|-c)	shift
 			assertSingleCommand "$*"
-			[ -n "$DEBUG" -a "$1" = "$DEBUG" ] && shift   # The ${DEBUG:-echo} non-debug fallback.
+			shift $(countDebugArgs "$@")
 			commands="$1"; shift
 			;;
 	--)		shift
-			[ -n "$DEBUG" -a "$1" = "$DEBUG" ] && shift   # The ${DEBUG:-echo} non-debug fallback.
+			shift $(countDebugArgs "$@")
 			break
 			;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
@@ -121,6 +138,7 @@ do
 done
 if [ $# -ne 0 ]; then
     assertSingleCommand "$*"
+    shift $(countDebugArgs "$@")
     # Need to quote SIMPLECOMMAND to undo the effects of eval.
     printf -v quotedSimpleCommand '%q ' "$@"
     commands="${quotedSimpleCommand% }"
