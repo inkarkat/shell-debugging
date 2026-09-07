@@ -21,12 +21,13 @@ printLongUsage()
     # This is the long "man page" when launched with the help argument.
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
-Duplicate standard input to a debug file (DEBUGGEE.log) / \$DEBUGTEE_SINK /
-\$DEBUG_SINK if debugging is enabled for the debuggee, and print the debug
-filespec to the terminal at the end.
+Duplicate standard input to \$DEBUGTEE_SINK / \$DEBUG_SINK / a debug file
+DEBUGGEE.log inside \$DEBUG_LOGDIR / the current directory if debugging is
+enabled for the debuggee, and print the debug filespec to the terminal at the
+end:
 $ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-$ DEBUG=debug[tee]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
-  FILE instead.
+$ DEBUG=debug[tee]=FILE|&N,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
+  FILE or file descriptor N instead.
 $ DEBUG=debug[tee] DEBUGGEE ... will show for what DEBUGGEE it will enable (if
   not actually enabled).
 HELPDESCRIPTION

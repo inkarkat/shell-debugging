@@ -29,37 +29,34 @@ printLongUsage()
 If debugging is not enabled for the caller, simply print COMMAND so that the
 invoking eval executes it normally.
 When \$DEBUG refers plainly to the DEBUGGEE, COMMAND is printed for execution by
-the invoking eval and additionally written as an execution trace.
+the invoking eval and additionally logged as an execution trace:
 \$ DEBUG=DEBUGGEE[:MODULE][EXTENSION] DEBUGGEE ...
 
 Extensions:
 When \$DEBUG refers to DEBUGGEE!, COMMAND is NOT printed / executed and just
-written as an execution trace.
+logged as an execution trace.
 When \$DEBUG refers to DEBUGGEE&, COMMAND is printed for execution with tracing
-enabled (set -x) by the invoking eval and additionally written as an execution
-trace.
+enabled (set -x) by the invoking eval.
 When \$DEBUG refers to DEBUGGEE~, COMMAND is printed for execution with time
-reporting (to the debug file) enabled by the invoking eval and additionally
-written as an execution trace.
+reporting (to the debug file) enabled by the invoking eval.
 When \$DEBUG refers to DEBUGGEE=OTHER-COMMAND, OTHER-COMMAND instead of COMMAND
-is printed for execution by the invoking eval and additionally written as an
-execution trace.
+is printed for execution by the invoking eval.
 When \$DEBUG refers to DEBUGGEE@[N-]FILE, the execution uses the contents of
 FILE (and an exit status of N) as the output of the skipped COMMAND execution.
 This allows the injection of canned output (and exit status) for testing
 purposes.
 When \$DEBUG refers to DEBUGGEE^=PREFIX, PREFIX is put before COMMAND for
-execution by the invoking eval and additionally written as an execution trace.
+execution by the invoking eval.
 When \$DEBUG refers to DEBUGGEE+=SUFFIX, SUFFIX is put after COMMAND for
-execution by the invoking eval and additionally written as an execution trace.
+execution by the invoking eval.
 When \$DEBUG refers to DEBUGGEE?PREDICATE, COMMAND is printed for execution by
 the invoking eval (or not printed / replaced / embellished according to any
-other instructions) and also written as an execution trace only if PREDICATE is
-successful.
+other instructions) only if PREDICATE is successful.
 
-Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGEVAL_SINK / \$DEBUG_SINK.
-\$ DEBUG=debug[eval]=FILE,DEBUGGEE[:MODULE][EXTENSION] DEBUGGEE ... will log to
-  FILE instead.
+Logging goes into \$DEBUGEVAL_SINK / \$DEBUG_SINK / a debug file DEBUGGEE.log
+inside \$DEBUG_LOGDIR / the current directory:
+\$ DEBUG=debug[eval]=FILE|&N,DEBUGGEE[:MODULE][EXTENSION] DEBUGGEE ... will log
+  to FILE or file descriptor N instead.
 \$ DEBUG=debug[eval] DEBUGGEE ... will show for what DEBUGGEE it will enable (if
   not actually enabled).
 HELPDESCRIPTION
@@ -86,7 +83,7 @@ SEE ALSO:
   functionality if you don't need the additional embellishments provided by
   debugeval.
 - testeval is a variant that triggers on TEST instead of DEBUG and does not
-  write execution traces nor supports trace enablement, and is intended for
+  log execution traces nor supports trace enablement, and is intended for
   implementing test hooks.
 HELPTEXT
 }

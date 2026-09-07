@@ -101,10 +101,10 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 When \$DEBUG refers to the DEBUGGEE, write the COMMAND and its arguments
 (separated by a space or \$ECHOTRACE_IFS) as an execution trace (i.e. with \$PS4
-prepended and indicating the nesting level) to a debug file (DEBUGGEE.log) /
-\$ECHOTRACE_SINK / \$DEBUG_SINK without actually executing COMMAND. (Basically
-"set -x" but without the execution.) Else, the COMMAND is just executed as if
-echotrace weren't prepended.
+prepended and indicating the nesting level) to \$ECHOTRACE_SINK / \$DEBUG_SINK /
+a debug file DEBUGGEE.log inside \$DEBUG_LOGDIR / the current directory without
+actually executing COMMAND. (Basically "set -x" but without the execution.)
+Else, the COMMAND is just executed as if echotrace weren't prepended.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"

@@ -24,11 +24,12 @@ printLongUsage()
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
 Execute COMMAND(s) if debugging is enabled for the caller and report an
-unsuccessful execution (and/or any output from COMMAND(s)) in a debug file
-(DEBUGGEE.log) / \$DEBUGASSERT_SINK / \$DEBUG_LOG:
+unsuccessful execution (and/or any output from COMMAND(s)) in \$DEBUGASSERT_SINK
+/ \$DEBUG_SINK / a debug file DEBUGGEE.log inside \$DEBUG_LOGDIR / the current
+directory:
 \$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-\$ DEBUG=debug[assert]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
-  instead.
+\$ DEBUG=debug[assert]=FILE|&N,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
+  or file descriptor N instead.
 \$ DEBUG=debug[assert] DEBUGGEE ... will show for what DEBUGGEE it will assert
   (if not actually asserting).
 HELPDESCRIPTION

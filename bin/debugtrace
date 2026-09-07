@@ -29,7 +29,7 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 If debugging is not enabled for the caller, the execution is a no-op.
 When \$DEBUG refers plainly to the DEBUGGEE, the hitting of this point is
-logged [with DESCRIPTION] [with ARG(s)].
+logged [with DESCRIPTION] [with ARG(s)]:
 \$ DEBUG=DEBUGGEE[:MODULE][EXTENSION] DEBUGGEE ...
 
 Extensions:
@@ -54,9 +54,10 @@ ARG(s) are set in the caller.
 When \$DEBUG refers to DEBUGGEE?PREDICATE, any other instructions for DEBUGGEE
 are only considered if PREDICATE is successful.
 
-Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGTRACE_SINK / \$DEBUG_SINK.
-\$ DEBUG=debug[trace]=FILE,DEBUGGEE[:MODULE][EXTENSION] DEBUGGEE ... will log to
-  FILE instead.
+Logging goes into \$DEBUGTRACE_SINK / \$DEBUG_SINK / a debug file DEBUGGEE.log
+inside \$DEBUG_LOGDIR / the current directory:
+\$ DEBUG=debug[trace]=FILE|&N,DEBUGGEE[:MODULE][EXTENSION] DEBUGGEE ... will log
+  to FILE or file descriptor N instead.
 \$ DEBUG=debug[trace] DEBUGGEE ... will show for what DEBUGGEE it will enable
   (if not actually enabled).
 HELPDESCRIPTION
