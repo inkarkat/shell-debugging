@@ -23,7 +23,8 @@ printLongUsage()
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
 Print the exit status of the supplied command-line to standard error /
-\$DUMPSTATUS_SINK / \$DEBUG_SINK.
+\$DUMPSTATUS_SINK / \$DEBUG_SINK / a debug file DEBUGGEE.log inside \$DEBUG_LOGDIR
+/ the current directory.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
@@ -34,8 +35,8 @@ HELPDESCRIPTION
 			when \$DEBUG refers to the DEBUGGEE, and print the debug
 			filespec to the terminal.
 \$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-\$ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a
-  custom FILE instead.
+\$ DEBUG=debug|${scriptName}=FILE|&N,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a
+  custom FILE or file descriptor N instead.
 \$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will
   enable (if not actually enabled).
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the

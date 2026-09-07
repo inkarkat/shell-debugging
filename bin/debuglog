@@ -22,12 +22,12 @@ printLongUsage()
     # This is the long "man page" when launched with the help argument.
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
-${isLogF:+Format and }Log MESSAGE (in the format TIMESTAMP (PID) MESSAGE ...) to a debug
-file (DEBUGGEE.log) / \$DEBUGLOG_SINK / \$DEBUG_LOG if debugging is enabled for
-the caller:
+${isLogF:+Format and }Log MESSAGE (in the format TIMESTAMP (PID) MESSAGE ...) to
+\$DEBUGLOG_SINK / \$DEBUG_SINK / a debug file DEBUGGEE.log inside \$DEBUG_LOGDIR /
+the current directory if debugging is enabled for the caller:
 \$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-\$ DEBUG=debug[log]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
-  instead.
+\$ DEBUG=debug[log]=FILE|&N,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
+  or file descriptor N instead.
 \$ DEBUG=debug[log] DEBUGGEE ... will show for what DEBUGGEE it will enable (if
   not actually enabled).
 HELPDESCRIPTION

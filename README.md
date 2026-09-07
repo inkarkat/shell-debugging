@@ -6,7 +6,7 @@ _Debugging aids for shell scripts._
 
 * Bash, GNU `sed`
 * [inkarkat/shell-basics](https://github.com/inkarkat/shell-basics)
-* [inkarkat/header](https://github.com/inkarkat/header) for the `debugtee` command
+* [inkarkat/headers](https://github.com/inkarkat/headers) for the `debugtee` command
 
 ### Installation
 

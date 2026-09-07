@@ -26,10 +26,11 @@ printLongUsage()
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
 Execute COMMAND(s) if debugging is enabled for the caller; any output will be
-collected in a debug file (DEBUGGEE.log) / \$DEBUGCUSTOM_SINK / \$DEBUG_LOG:
+collected in \$DEBUGCUSTOM_SINK / \$DEBUG_SINK / a debug file DEBUGGEE.log
+inside \$DEBUG_LOGDIR / the current directory:
 \$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-\$ DEBUG=debug[custom]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
-  instead.
+\$ DEBUG=debug[custom]=FILE|&N,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
+  or file descriptor N instead.
 \$ DEBUG=debug[custom] DEBUGGEE ... will show for what DEBUGGEE it will enable
   (if not actually enabled).
 HELPDESCRIPTION

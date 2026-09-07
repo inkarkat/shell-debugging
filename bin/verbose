@@ -71,8 +71,8 @@ HELPTEXT
 			Else, the COMMAND is just executed as if verbose weren't
 			prepended.
 \$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-\$ DEBUG=debug|${scriptName}=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a custom
-  FILE instead.
+\$ DEBUG=debug|${scriptName}=FILE|&N,DEBUGGEE[:MODULE] DEBUGGEE ... will log to a
+  custom FILE or file descriptor N instead.
 \$ DEBUG=debug|${scriptName} DEBUGGEE ... will show for what DEBUGGEE it will enable
   (if not actually enabled).
     --for DEBUGGEE	Target DEBUGGEE; by default it will take the name of the
@@ -133,7 +133,8 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 Execute and write arguments (separated by a space or \$VERBOSE_IFS) as an
 execution trace (i.e. with \$PS4 prepended and indicating the nesting level) to
-standard error / \$VERBOSE_SINK / \$DEBUG_SINK, just like "set -x".
+standard error / \$VERBOSE_SINK / \$DEBUG_SINK / a debug file DEBUGGEE.log
+inside \$DEBUG_LOGDIR / the current directory, just like "set -x".
 HELPDESCRIPTION
     echo
     printShortUsage "$1"

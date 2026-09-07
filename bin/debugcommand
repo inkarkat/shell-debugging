@@ -22,14 +22,14 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 If debugging is not enabled for the caller, simply execute COMMAND.
 When \$DEBUG refers plainly to the DEBUGGEE, COMMAND is executed and additionally
-it's written as an execution trace.
-When \$DEBUG refers to DEBUGGEE!, COMMAND is NOT executed and just written as an
+logged as an execution trace.
+When \$DEBUG refers to DEBUGGEE!, COMMAND is NOT executed and just logged as an
 execution trace.
-Logging goes into a debug file (DEBUGGEE.log) / \$DEBUGCOMMAND_SINK /
-\$DEBUG_SINK.
+Logging goes into \$DEBUGCOMMAND_SINK / \$DEBUG_SINK / a debug file DEBUGGEE.log
+inside \$DEBUG_LOGDIR / the current directory.
 \$ DEBUG=DEBUGGEE[:MODULE] DEBUGGEE ...
-\$ DEBUG=debug[command]=FILE,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
-  instead.
+\$ DEBUG=debug[command]=FILE|&N,DEBUGGEE[:MODULE] DEBUGGEE ... will log to FILE
+  or file descriptor N instead.
 \$ DEBUG=debug[command] DEBUGGEE ... will show for what DEBUGGEE it will enable
   (if not actually enabled).
 HELPDESCRIPTION
