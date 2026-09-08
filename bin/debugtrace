@@ -1,6 +1,7 @@
 #!/bin/bash
 shopt -qs extglob
 
+: ${DEBUGTRACE_ENVS_END=;}
 : ${DEBUGTRACE_ARGQUOTES=「」}
 O="${DEBUGTRACE_ARGQUOTES:0:1}"; C="${DEBUGTRACE_ARGQUOTES:1:1}"
 
@@ -13,7 +14,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+eval $([DEBUG[TRACE]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s)}\n' "$(basename "$1")" '[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-o $-] [-- "$@"] [-?|-h|--help]'
+    printf 'Usage: ${DEBUG:+eval $([DEBUG[TRACE]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s)}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-o $-] [-v|--var VAR[=VALUE] [-v ...]] [--envs [VAR1 ...] ${DEBUGTRACE_ENVS_END}] [-- \"\$@\"] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -80,6 +81,14 @@ HELPDESCRIPTION
 			each separately.
     -o \$-		Pass the caller's current shell options to allow
 			detection of whether debugging is currently enabled.
+    --var|-v VAR=VALUE	Pass caller (local) variable VAR having VALUE to log it.
+			(You can use DEBUGGEE=VAR=VALUE to modify it in the
+			caller.)
+    --var|-v VAR	Log the caller's exported variable VAR and its value.
+    --envs [VAR1 ...] ${DEBUGTRACE_ENVS_END}	Log the following VAR(s); i.e. all following arguments
+			until an argument consisting of '${DEBUGTRACE_ENVS_END}' is encountered.
+			(You can use --envs \${!PREFIX_*} ${DEBUGTRACE_ENVS_END} to log all exported
+			variables with a certain prefix.)
     -- "\$@"		Pass the caller's current arguments to log them and
 			allow substitutions in them.
 SEE ALSO:
@@ -87,6 +96,17 @@ SEE ALSO:
   statements in the caller, and has similar replacements and embellishments for
   that COMMAND.
 HELPTEXT
+}
+
+typeset -a variables=()
+addVariable() {
+    local variableDefinition
+    if [[ "${1:?}" =~ ^([^=]+)=(.*)$ ]]; then
+	printf -v variableDefinition '%s=%q' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    else
+	printf -v variableDefinition '%s=%q' "$1" "${!1}"
+    fi
+    variables+=("$variableDefinition")
 }
 
 debuggee="$DEBUG_DEBUGGEE"
@@ -112,6 +132,18 @@ do
 			    || isTracing=
 			shift
 			;;
+	--var|-v)	shift; addVariable "${1:?}"; shift;;
+	--envs)		shift
+			while [ $# -gt 0 -a "$1" != "$DEBUGTRACE_ENVS_END" ]
+			do
+			    addVariable "${1:?}"; shift
+			done
+			if [ $# -eq 0 ]; then
+			    echo "ERROR: --envs must be concluded with '${DEBUGTRACE_ENVS_END}'"; echo; printUsage "$0"
+			    exit 2
+			fi >&2
+			shift
+			;;
 	--)		shift; hasArgs=t; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -132,11 +164,26 @@ logActions()
     local timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
     local nestingPrefix="$(debugNestingPrefix)"
     local printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
-    printf >&3 '%s%s %s%s%s\n' \
+
+    local renderedVariables
+    case ${#variables[@]} in
+	0)  ;;
+	1)  renderedVariables=" with variable ${O}${variables[0]}${C}";;
+	2|3)
+	    local IFS=' '
+	    renderedVariables=" with variables ${O}${variables[*]}${C}"
+	    ;;
+	*)  local IFS=$'\n'
+	    renderedVariables=$' with variables:\n'"${variables[*]}"${actions:+$'\n\t'}
+	    ;;
+    esac
+
+    printf >&3 '%s%s %s%s%s%s\n' \
 	"$printerPrefix" \
 	"$debuggee (${module}${module:+, }${PPID})" \
 	"reached ${tracePointName:-trace point}${description:+ (${description})}" \
 	"${quotedArgs:+ with arguments ${O}${quotedArgs}${C}}" \
+	"$renderedVariables" \
 	"$(joinBy --prefix '; ' ', ' "${actions[@]}")"
 }
 
