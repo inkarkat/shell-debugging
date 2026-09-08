@@ -22,27 +22,37 @@ assertCall()
     assertCall
 }
 
-@test "without DEBUG, the command-line is mirrored back" {
+@test "without DEBUG, the command-line is executed" {
     run -0 testCommandLine
     assertCall
 }
 
-@test "with different DEBUG target, the command is mirrored back" {
+@test "with different DEBUG target, the command is executed" {
     DEBUG=aDifferentDebuggee run -0 testSimpleCommand
     assertCall
 }
 
-@test "with different DEBUG target, the command-line is mirrored back" {
+@test "with different DEBUG target, the command-line is executed" {
     DEBUG=aDifferentDebuggee run -0 testCommandLine
     assertCall
 }
 
-@test "with DEBUG targeting, the command is mirrored back" {
+@test "with DEBUG targeting, the command is executed" {
     DEBUG=debuggee run -0 testSimpleCommand
     assertCall
 }
 
-@test "with DEBUG targeting, the command-line is mirrored back" {
+@test "with DEBUG targeting, the command-line is executed" {
     DEBUG=debuggee run -0 testCommandLine
     assertCall
+}
+
+@test "with DEBUG targeting and the ! extension, the command is not executed" {
+    DEBUG=debuggee\! run -0 testSimpleCommand
+    assert_output ''
+}
+
+@test "with DEBUG targeting and the ! extension, the command-line is not executed" {
+    DEBUG=debuggee\! run -0 testCommandLine
+    assert_output ''
 }
