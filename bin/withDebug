@@ -17,7 +17,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] (-l|--list-targets | [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|'' [-x ...]]) --[only-]for COMMANDNAME [--[only-]for ...] [-?|-h|--help] ..."
+    printf 'Usage: %q %s\n' "$(basename "$1")" "[-1|--stdout] [-2|--stderr] [-a|--append|-P|--no-pager] [--to FILE|-i|--inbox|-s|--to-separate-files|-t|--to-tty] [-T|--no-timestamps] [-I|--interactive] [-v|--verbose] (-l|--list-targets | [-m|--module MODULE|'' [-m ...]|-M|--only-module MODULE|'' [-M ...]] [-x|--extension EXTENSION|'' [-x ...]]) -F|--[only-]for COMMANDNAME [-F|--[only-]for ...] [-?|-h|--help] ..."
     printf 'Usage: %q %s\n' "$(basename "$1")" "... [--same] -c|--command \"COMMANDLINE\" [...] | --exec SIMPLECOMMAND [...] ${WITHDEBUG_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: %q %s\n' "$(basename "$1")" '... --recall'
 }
@@ -88,7 +88,7 @@ HELPDESCRIPTION
 			the debuggee.
     --for COMMANDNAME	Also enable debugging diagnostics and wrapper commands
 			for COMMANDNAME.
-    --only-for COMMANDNAME
+    --only-for|-F COMMANDNAME
 			Just enable debugging diagnostics and wrapper commands
 			for COMMANDNAME, but not for any following --command or
 			--exec COMMAND(s) or [--] SIMPLECOMMAND.
@@ -265,7 +265,7 @@ handleStoredArguments()
 	    --no-timestamps|-T)	shift; overrideNoTimestamps=t;;
 	    --to)		shift; overrideTo="$1"; shift;;
 	    --for)		shift; overrideFor["$1"]=t; shift;;
-	    --only-for)		shift; overrideOnlyFor["$1"]=t; shift;;
+	    --only-for|-F)	shift; overrideOnlyFor["$1"]=t; shift;;
 	    --module|-m)	shift; overrideModules["${1:-$'\n'}"]=t; shift;;
 	    --only-module|-M)	shift; overrideOnlyModules["${1:-$'\n'}"]=t; shift;;
 	    --extension|-x)	shift; overrideExtensions["${1:-$'\n'}"]=t; shift;;
@@ -302,7 +302,7 @@ handleStoredArguments()
 	    --no-timestamps|-T)	[ "$overrideNoTimestamps" ] && overrideNoTimestamps= || allargs+=("$1"); shift;;
 	    --to)		[ -n "$overrideTo" ] && overrideTo= || allargs+=("$1" "$2"); shift; shift;;
 	    --for)		[ "${overrideFor["$2"]}" ] && unset "overrideFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
-	    --only-for)		[ "${overrideOnlyFor["$2"]}" ] && unset "overrideOnlyFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
+	    --only-for|-F)	[ "${overrideOnlyFor["$2"]}" ] && unset "overrideOnlyFor[$2]" || allargs+=("$1" "$2"); shift; shift;;
 	    --module|-m)	[ "${overrideModules["${2:-$'\n'}"]}" ] && unset "overrideModules[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
 	    --only-module|-M)   [ "${overrideOnlyModules["${2:-$'\n'}"]}" ] && unset "overrideOnlyModules[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
 	    --extension|-x)	[ "${overrideExtensions["${2:-$'\n'}"]}" ] && unset "overrideExtensions[${2:-$'\n'}]" || allargs+=("$1" "$2"); shift; shift;;
@@ -407,7 +407,7 @@ do
 	--for)		nonCommandArgs+=("$1" "$2"); shift
 			addDebug "${1:?}"; shift
 			;;
-	--only-for)	nonCommandArgs+=("$1" "$2"); shift
+	--only-for|-F)	nonCommandArgs+=("$1" "$2"); shift
 			addDebug "${1:?}"; shift
 			isAddDebugCommand=
 			;;
