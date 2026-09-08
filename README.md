@@ -2,11 +2,14 @@
 
 _Debugging aids for shell scripts._
 
+![Build Status](https://github.com/inkarkat/shell-debugging/actions/workflows/build.yml/badge.svg)
+
 ### Dependencies
 
 * Bash, GNU `sed`
 * [inkarkat/shell-basics](https://github.com/inkarkat/shell-basics)
 * [inkarkat/headers](https://github.com/inkarkat/headers) for the `debugtee` command
+* automated testing is done with _Bats_ - [Bash Automated Testing System](https://github.com/bats-core/bats-core)
 
 ### Installation
 
