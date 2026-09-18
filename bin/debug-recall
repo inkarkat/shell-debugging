@@ -6,7 +6,7 @@ debugRecall()
 {
     FILERECALL="$(basename -- "$0")" \
     FILERECALL_BASEDIR="$DEBUG_LOGDIR" \
-    FILERECALL_WHAT='debug log' \
+    FILERECALL_WHERE='debug log' \
     FILERECALL_OFFER_SUBDIRS='' \
 	exec file-recall "$@"
 }
