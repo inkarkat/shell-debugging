@@ -14,7 +14,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, they can
     # skim the long one.
-    printf 'Usage: ${DEBUG:+eval $([DEBUG[TRACE]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s)}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-o $-] [-v|--var VAR[=VALUE] [-v ...]] [--envs [VAR1 ...] ${DEBUGTRACE_ENVS_END}] [-- \"\$@\"] [-?|-h|--help]"
+    printf 'Usage: ${DEBUG:+eval $([DEBUG[TRACE]_SINK=FILE|&N|"" | DEBUG_LOGDIR=DIR] %q %s)}\n' "$(basename "$1")" "[--for DEBUGGEE] [-m|--module MODULE] [--to FILE] [-d|--description DESCRIPTION] [-p|--point TRACE-POINT-NAME] [-o $-] [-v|--var \"\$(declare -p VAR)\"|VAR[=VALUE] [-v ...]] [--envs [VAR1 ...] ${DEBUGTRACE_ENVS_END}] [-- \"\$@\"] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -81,6 +81,9 @@ HELPDESCRIPTION
 			each separately.
     -o \$-		Pass the caller's current shell options to allow
 			detection of whether debugging is currently enabled.
+    --var "\$(declare -p VAR)"
+			Pass caller (local) variable VAR definition, regardless
+			of its type.
     --var|-v VAR=VALUE	Pass caller (local) variable VAR having VALUE to log it.
 			(You can use DEBUGGEE=VAR=VALUE to modify it in the
 			caller.)
@@ -101,7 +104,9 @@ HELPTEXT
 typeset -a variables=()
 addVariable() {
     local variableDefinition
-    if [[ "${1:?}" =~ ^([^=]+)=(.*)$ ]]; then
+    if [[ "${1:?}" =~ ^declare\ -[^[:space:]]+\ (.*)$ ]]; then
+	variableDefinition="${BASH_REMATCH[1]}"
+    elif [[ "${1:?}" =~ ^([^=]+)=(.*)$ ]]; then
 	printf -v variableDefinition '%s=%q' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
     else
 	printf -v variableDefinition '%s=%q' "$1" "${!1}"
