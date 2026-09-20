@@ -1,0 +1,7 @@
+#!/bin/bash
+
+export exported='exported value'
+scalar=$'a\n\n\nscalar\nvalue'
+typeset -a array=('array value 1' $'array\nvalue\n2' 'array value 3')
+typeset -A dict=([key1]='value1' [$'second\nkey']='value2' [key3]=$'value\n3')
+${DEBUG:+eval $(debugtrace -p main --var fixed=fixec --var exported --var "$(declare -p scalar array dict)" -o $- -- "$@")}
