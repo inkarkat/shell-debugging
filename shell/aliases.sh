@@ -25,11 +25,15 @@ if [ ! "${KSH_VERSION:-}" ]; then
 fi
 
 # dt			Execute COMMAND while enabling tracing (set -x) for it.
+# dtm			Execute COMMAND while enabling tracing (set -x) at the
+#			main trace point.
 alias dt='withDebug --extension \&'
-optionmunge -s : HISTIGNORE 'dt:dt *'
+alias dtm='withDebug --extension \&main'
+optionmunge -s : HISTIGNORE 'dt:dt *:dtm:dtm *'
 alias dta='withDebuga --extension \&'
-optionmunge -s : HISTIGNORE 'dta:dta *'
-completeAsCommand dt dta
+alias dtma='withDebuga --extension \&main'
+optionmunge -s : HISTIGNORE 'dta:dta *:dtma:dtma *'
+completeAsCommand dt dtm dta dtma
 
 # ds			Execute COMMAND with the same debugging options as the
 #			previous invocation of withDebug, optionally dropping
