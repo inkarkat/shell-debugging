@@ -239,7 +239,7 @@ printer()
 {
     PRETTYPRINTQUOTEDARGS_IFS="$VERBOSE_IFS" \
     PRETTYPRINTQUOTEDARGS_PREFIX="$printerPrefix" \
-	prettyPrintQuotedArgs -- "$@" >&3
+	prettyPrintQuotedArgs -- "$@" >&9
 }
 executor()
 {
@@ -250,7 +250,7 @@ if [ "$isEval" ] && [ "$1" = eval ]; then
     shift
     printer()
     {
-	joinBy >&3 --prefix "${printerPrefix}" -- "$VERBOSE_IFS" "$@"
+	joinBy >&9 --prefix "${printerPrefix}" -- "$VERBOSE_IFS" "$@"
     }
     executor()
     {
@@ -264,7 +264,7 @@ logWithPrefix()
     local isEOL=t
     while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
     do
-	printf '%s%s\n' "$prefix" "$line" >&3
+	printf '%s%s\n' "$prefix" "$line" >&9
 	printf "%s%s${isEOL:+\\n}" "$line"
     done
 }
@@ -352,17 +352,18 @@ setSink()
     sink="${VERBOSE_SINK-${isOnDebug:+$DEBUG_SINK}}"
     case "$sink" in
 	'')		[ -n "$BATS_TEST_NAME" ] \
-			    || exec 3>&2
+			    && exec 9>&3 \
+			    || exec 9>&2
 			;;
-	\&+([0-9]))	eval "exec 3>$sink";;
-	?*)		exec 3>>"$sink";;
+	\&+([0-9]))	eval "exec 9>$sink";;
+	?*)		exec 9>>"$sink";;
     esac
 }
 
 printfToSink()
 {
     setSink
-    printf >&3 "$@"
+    printf >&9 "$@"
 }
 
 timestampPrefix=

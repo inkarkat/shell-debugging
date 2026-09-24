@@ -174,7 +174,7 @@ logCommands()
     local timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
     local nestingPrefix="$(debugNestingPrefix)"
     local printerPrefix="${timestampPrefix}${timestampPrefix:+ }${nestingPrefix}"
-    printf >&3 '%s%s %s\n' "$printerPrefix" "$debuggee (${module}${module:+, }${PPID})" "$commands"
+    printf >&9 '%s%s %s\n' "$printerPrefix" "$debuggee (${module}${module:+, }${PPID})" "$commands"
 }
 
 passthroughAndLogCommands()
@@ -206,22 +206,22 @@ sinkRedir=
 traceRedir=
 case "$sink" in
     '')		if [ -n "$BATS_TEST_NAME" ]; then
-		    redir='>&3'
-		    traceRedir='BASH_XTRACEFD=3'
+		    redir='>&9'
+		    traceRedir='BASH_XTRACEFD=9'
 		    sinkRedir=''
 		else
 		    redir='>&2'
 		    traceRedir='BASH_XTRACEFD=2'
-		    sinkRedir="exec 3${redir}"
+		    sinkRedir="exec 9${redir}"
 		fi
 		;;
     \&+([0-9]))	redir=">$sink"
-		sinkRedir="exec 3${redir}"
-		traceRedir="${sinkRedir}; BASH_XTRACEFD=3"
+		sinkRedir="exec 9${redir}"
+		traceRedir="${sinkRedir}; BASH_XTRACEFD=9"
 		;;
     ?*)		printf -v redir '>>%q' "$sink"
-		sinkRedir="exec 3${redir}"
-		traceRedir="${sinkRedir}; BASH_XTRACEFD=3"
+		sinkRedir="exec 9${redir}"
+		traceRedir="${sinkRedir}; BASH_XTRACEFD=9"
 		;;
 esac
 handleToFile()
@@ -230,12 +230,12 @@ handleToFile()
 
     # Log the reference in the debug file.
     timestampPrefix="$(${DEBUG_TIMESTAMP_COMMAND-timestamp --logging})"
-    (eval "$sinkRedir"; printf >&3 '%s%s Logged to %s\n' "${timestampPrefix}${timestampPrefix:+ }" "$debuggee (${module}${module:+, }${PPID})" "$toFile")
+    (eval "$sinkRedir"; printf >&9 '%s%s Logged to %s\n' "${timestampPrefix}${timestampPrefix:+ }" "$debuggee (${module}${module:+, }${PPID})" "$toFile")
 
     # Redirect the captured output to the specified FILE.
     printf -v redir '>>%q' "$toFile"
-    sinkRedir="exec 3${redir}"
-    traceRedir="${sinkRedir}; BASH_XTRACEFD=3"
+    sinkRedir="exec 9${redir}"
+    traceRedir="${sinkRedir}; BASH_XTRACEFD=9"
 
     toFile=''	# No-op if the function is called again.
 }
@@ -248,7 +248,7 @@ hadPredicate=; while debugConsumeDirectiveInto predicate '?'; do
     if [ -z "$predicate" ]; then
 	isActive=t
 	printfToSink '%s: Warning: Empty PREDICATE given for %q\n' "$scriptName" "${debuggee}${module:+:}${module}"
-    elif eval "(${sinkRedir}; { ${predicate}; } >&3 2>&3)"; then
+    elif eval "(${sinkRedir}; { ${predicate}; } >&9 2>&9)"; then
 	isActive=t
     fi
 done

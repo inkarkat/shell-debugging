@@ -527,15 +527,15 @@ if [ ${#captureCommand[@]} -gt 0 ]; then
 
     { "${captureCommand[@]}" < "$TMPFIFO"; } &	# Start the reader first.
     capturePID=$!
-    exec 3>"$TMPFIFO"	# Open the pipe for writing; this will block until the reader is ready.
+    exec {TMPFD}>"$TMPFIFO"	# Open the pipe for writing; this will block until the reader is ready.
     rm -- "$TMPFIFO" # Unlink the named pipe.
 
-    sink='&3'
+    sink="&${TMPFD:?}"
     export DEBUG_SINK="$sink"
-    export BASH_XTRACEFD=3    # Capture "set -x" output by the log sink command, too.
+    export BASH_XTRACEFD=$TMPFD    # Capture "set -x" output by the log sink command, too.
     closeFifo()
     {
-	exec 3>&- # Close the pipe.
+	exec {TMPFD}>&- # Close the pipe.
 	wait $capturePID
     }
     trap closeFifo EXIT
@@ -554,15 +554,15 @@ elif [ "$sink" = '&2' ]; then
     export DEBUG_SINK=''    # Empty means stderr.
 else
     [ "$isAppend" ] || : > "$sink"
-    exec 3>>"${sink:?}"; export BASH_XTRACEFD=3	# Capture "set -x" output in the log file, too.
+    exec {TMPFD}>>"${sink:?}"; export BASH_XTRACEFD=${TMPFD:?}	# Capture "set -x" output in the log file, too.
     export DEBUG_SINK="$sink"
     printf '%s\n' "$sink" > "$WITHDEBUG_LASTLOG_FILESPEC"
 
     if [ ${#pager[@]} -gt 0 ]; then
 	openPager()
 	{
-	    [ "$isIncludeStdout" ] && exec 1>&4
-	    [ "$isIncludeStderr" ] && exec 2>&5
+	    [ "$isIncludeStdout" ] && exec 1>&${SAVE_STDOUT_FD:?}
+	    [ "$isIncludeStderr" ] && exec 2>&${SAVE_STDERR_FD:?}
 	    [ ${#prePagerCommand[@]} -eq 0 ] || "${prePagerCommand[@]}" "$sink"
 	    "${pager[@]}" "$sink"
 	}
@@ -580,10 +580,10 @@ else
 fi
 
 if [ "$isIncludeStdout" ]; then
-    exec 4>&1 1>&3
+    exec {SAVE_STDOUT_FD}>&1 1>&${TMPFD:?}
 fi
 if [ "$isIncludeStderr" ]; then
-    exec 5>&1 2>&3
+    exec {SAVE_STDERR_FD}>&1 2>&${TMPFD:?}
 fi
 
 # This command itself creates one more nesting level.
