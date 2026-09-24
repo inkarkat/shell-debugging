@@ -173,7 +173,7 @@ printer()
 {
     PRETTYPRINTQUOTEDARGS_IFS="$ECHOTRACE_IFS" \
     PRETTYPRINTQUOTEDARGS_PREFIX="$printerPrefix" \
-	prettyPrintQuotedArgs -- "$@" >&3
+	prettyPrintQuotedArgs -- "$@" >&9
 }
 executor()
 {
@@ -188,7 +188,7 @@ if [ "$isEval" ] && [ "$1" = eval ]; then
     }
     printer()
     {
-	joinBy >&3 --prefix "${printerPrefix}" -- "$ECHOTRACE_IFS" "$@"
+	joinBy >&9 --prefix "${printerPrefix}" -- "$ECHOTRACE_IFS" "$@"
     }
 fi
 
@@ -196,7 +196,7 @@ logStdin()
 {
     while IFS=$'\n' read -r line || [ -n "$line" ]
     do
-	printf '%s\n' "$line" >&3
+	printf '%s\n' "$line" >&9
     done
 }
 
@@ -217,10 +217,11 @@ setSink()
     sink="${ECHOTRACE_SINK-$DEBUG_SINK}"
     case "$sink" in
 	'')		[ -n "$BATS_TEST_NAME" ] \
-			    || exec 3>&2
+			    && exec 9>&3 \
+			    || exec 9>&2
 			;;
-	\&+([0-9]))	eval "exec 3>$sink";;
-	?*)		exec 3>>"$sink";;
+	\&+([0-9]))	eval "exec 9>$sink";;
+	?*)		exec 9>>"$sink";;
     esac
 }
 
@@ -245,11 +246,11 @@ case ",${DEBUG}," in
     *,@(debug|${scriptName}),*)
 	setSink
 	if [ "$isLogStdin" ]; then
-	    printf >&3 '%s: Will skip command execution and just log the command and stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}${ECHOTRACE_SIGIL}"
+	    printf >&9 '%s: Will skip command execution and just log the command and stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}${ECHOTRACE_SIGIL}"
 	elif [ -n "$stdinModule" ]; then
-	    printf >&3 '%s: Will skip command execution and just log the command with DEBUG=%q, stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}${ECHOTRACE_SIGIL}" "${debuggee}:${stdinModule}${ECHOTRACE_SIGIL}"
+	    printf >&9 '%s: Will skip command execution and just log the command with DEBUG=%q, stdin with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}${ECHOTRACE_SIGIL}" "${debuggee}:${stdinModule}${ECHOTRACE_SIGIL}"
 	else
-	    printf >&3 '%s: Will skip command execution and just log the command with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}${ECHOTRACE_SIGIL}"
+	    printf >&9 '%s: Will skip command execution and just log the command with DEBUG=%q\n' "$scriptName" "${debuggee}${module:+:}${module}${ECHOTRACE_SIGIL}"
 	fi
 	;&
     *)  executor "$@"
