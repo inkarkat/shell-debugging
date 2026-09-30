@@ -178,7 +178,14 @@ printer()
 executor()
 {
     [ "$1" = eval ] && EXEC=''
-    $EXEC "$@"
+
+    # Detect and handle VAR=VALUE assignments by using eval.
+    if [ -n "$EXEC" ] && [[ "$1" =~ ^[[:alpha:]_][[:alnum:]_]*= ]] && ! type -t -- "$1" >/dev/null; then
+	printf -v quotedSimpleCommand '%q ' "$@"
+	eval "${quotedSimpleCommand% }"
+    else
+	$EXEC "$@"
+    fi
 }
 if [ "$isEval" ] && [ "$1" = eval ]; then
     shift

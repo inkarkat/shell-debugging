@@ -70,8 +70,8 @@ if [ $# -eq 0 ]; then
     exit 2
 fi
 
-"$@"
-status=$?
+printf -v quotedSimpleCommand '%q ' "$@"
+eval "${quotedSimpleCommand% }"; status=$?
 
 unset sink
 setSink()

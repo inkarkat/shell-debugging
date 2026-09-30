@@ -63,4 +63,6 @@ fi
 
 DUMPARGS_PPID=$PPID \
     dump-args "${dumpArgsArgs[@]}" -- "$@"
-exec "$@"
+
+printf -v quotedSimpleCommand '%q ' "$@"
+eval "${quotedSimpleCommand% }"
