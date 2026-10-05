@@ -194,7 +194,7 @@ addCommand()
 		    # source doesn't understand VAR=VAL; these need to be put in front of it; i.e.
 		    # we need to inject source at the right place in $cmd.
 		    local extractedCommand="$(extractCommandName --keep-filespec "$cmd")"   # We need the actual filespec as given for injection of the source command.
-		    printf -v cmd '(BASH_ARGV0=%q; set -x --; %s)' "$extractedCommand" "${cmd/"$extractedCommand"/"source $extractedCommand"}"
+		    printf -v cmd '(BASH_ARGV0=%q; export DEBUG_DEBUGGEE=%q; set -x --; %s)' "$extractedCommand" "$extractedCommand" "${cmd/"$extractedCommand"/"source $extractedCommand"}"
 		fi
 	    fi
 	fi
