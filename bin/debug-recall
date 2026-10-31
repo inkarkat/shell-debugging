@@ -11,27 +11,41 @@ debugRecall()
 	exec file-recall "$@"
 }
 
-printUsage()
+LONGUSAGE=
+printLongUsage()
 {
-    cat <<HELPTEXT
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    $LONGUSAGE cat <<HELPTEXT
 Open the last debug log used by withDebug in the pager.
 HELPTEXT
-    echo
+    $LONGUSAGE echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '[-?|-h|--help]'
-    echo
-    cat <<HELPTEXT
+    $LONGUSAGE echo
+    $LONGUSAGE cat <<HELPTEXT
 Open all debug log files used by withDebug (last modified first) in the pager.
 HELPTEXT
-    echo
+    $LONGUSAGE echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '-a|--all'
-    echo
+    $LONGUSAGE echo
     debugRecall --help
+}
+printShortUsage()
+{
+    LONGUSAGE=: printLongUsage "$1"
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
 }
 
 typeset -a pager=("${PAGER:-less}" --RAW-CONTROL-CHARS); [ -t 1 ] || pager=(cat)
 action=
 case "$1" in
-    --help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+    --help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
     --all|-a)		shift; action=pageAll;;
 esac
 
